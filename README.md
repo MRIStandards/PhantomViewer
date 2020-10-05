@@ -1,5 +1,5 @@
-# PhantomViewerNew
-Analysis package to analyze MRI phantoms
+# PhantomViewer
+Analysis package written in Python to analyze MRI phantoms developed by NIST and collaborators at NCI, RSNA, NIBIB
 
 Created on Fri Oct 11 16:30:54 2013
 
