@@ -85,7 +85,8 @@ class PhantomViewer(QMainWindow):
     self.imv = self.ims.imv    #image stack pyqtgraph image view object
 
     self.imv.ui.roiBtn.setText("Line scan/ROI")
-    self.imv.ui.histogram.plot.setLogMode(None,True)    #set the histogram y axis to a log scale    
+#    self.imv.ui.histogram.plot.setLogMode(None,True)    #Not working in pyqtgraph 0.11!!set the histogram y axis to a log scale  
+#    self.imv.ui.histogram.plot.setLogMode(None,True)    #set the histogram y axis to a log scale      
     self.imv.vLine = pg.InfiniteLine(angle=90, movable=False)   #cross hair
     self.imv.hLine = pg.InfiniteLine(angle=0, movable=False)
     self.imv.addItem(self.imv.vLine, ignoreBounds=True)
