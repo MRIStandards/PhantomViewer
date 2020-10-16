@@ -2179,7 +2179,7 @@ class PhantomViewer(QMainWindow):
           if self.messageLogOn== True:
             self.messageLog+=s
 
-class fCircleROI(pg.EllipseROI):
+class fCircleROI(pg.EllipseROI):   #originally was pg.EllipseROI
     """Defines a circular ROI using pyqtgraph's EllipseROI"""
     def __init__(self, callingform, pos, size, label,   **args):   #passing in calling form, could be a problem
         pg.ROI.__init__(self, pos, size, **args)
@@ -2189,6 +2189,8 @@ class fCircleROI(pg.EllipseROI):
         self.label = pg.TextItem(label, callingform.lblColor, anchor = (0,0))
         self.label.setPos(pos[0],pos[1])
         self.label.setFont(callingform.lblFont)
+        
+        self.path=None    #added when updating to pyqtgraph 0.11 Do not know why it is not there
 
     def getArrayRegion(self, arr, img=None):
         arr = pg.ROI.getArrayRegion(self, arr, img)

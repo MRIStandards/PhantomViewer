@@ -5,8 +5,10 @@ Created on Fri Oct 11 16:30:54 2013
 
 PhantomViewer: Main class to display and analyze phantom data, mostly MRI data
 
-Modules required (most can be installed using 'pip install package' or  'pip install package --upgrade':
+Modules required (can be installed using 'pip install package' or  'pip install package --upgrade':
 verify module version using "pip show module"
+
+**Required Modules**
 
    Anaconda 3 with Python 3.7    (64 bit, Python, PyQT5, Numpy, Scipy, Pillow )
    
@@ -16,17 +18,19 @@ verify module version using "pip show module"
    
    lmfit Version: 1.0.0          (for nonlinear least squares fitting routines)
    
-   unwrap Version: 0.1.1
+ **Optional Modules**
+   unwrap Version: 0.1.1        (for phase unwrapping)
    
    scikit-image  Version: 0.11.3: uses unwrap_phase from skimage.resoration
    
    PyOpenGL                      (Used for 3D plotting)
+   
 
-will work with Anaconda 2 with Python 2.7.11, PYQT4 (not recommended)
+**Will work with Anaconda 2, Python 2.7.11, PYQT4 (not recommended)**
 
-Uses PhantomViewerGui created from PhantomViewer.ui by Qt Designer
+The main Gui is PhantomViewerGui5.py created from PhantomViewer.ui by Qt Designer
 
-  convert ui file to python by executing:
+  You can convert ui file to python by executing (this is not necessary unless you are modifying the GUI):
   
       "designer\pyuic4 designer\PhantomViewerGui.ui -o PhantomViewerpy\PhantomViewerGui4.py"
       
