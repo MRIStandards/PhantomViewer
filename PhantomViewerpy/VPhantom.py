@@ -158,7 +158,7 @@ class ROI():
     self.Name = "default"
     self.Index = 0
     self.Type = "Sphere"  #Sphere or Rectangle, 
-    self.Label = 'index'   #label to be printed next to ROI
+    self.Label = 'index'   #label to be printed next to ROI, if Label='noLable' no label is printed; if 'index', index is printed; else Label is printed
     self.Xcenter = 0.0  #position in mm
     self.Ycenter = 0.0
     self.Zcenter = 0.0
@@ -176,6 +176,7 @@ class ROI():
     self.array=np.zeros((10,10))        #array of voxel values
     self.color='k'    #ROI color to differentiate ROIs when data sets are plotted, color set "rgbcmykwrg" or (r,g,b)
     self.symbol='o'   #symbol to represent ROI in data plots
+    self.Value=0      #Used to store parameters unique to a particular set of ROIs 
     
   def SetROIParameter(self, param, value):
     if param == "Index":

@@ -57,7 +57,7 @@ if pyqtVersion==4:
 if pyqtVersion==5:
   from PhantomViewerGui5 import Ui_PhantomViewerGui    #main window Gui
 import ROIProperties, ROIInfo, PhantomProperties
-import T1IRabs, T1VFA, T1VTR, T2SE, DifModel # models for data fitting
+import T1IRabs, T1VFA, T1VTR, T2SE, DifModel, LCPowerLawFit # models for data fitting
 import T1IRmap,  T2SEmap, DifMap     #modules to make parameter maps
 import Resolution, Fiducial   #modules to perform automated resolution and geometric distortion measurements
 import Info
@@ -148,6 +148,7 @@ class PhantomViewer(QMainWindow):
     self.ui.actionResolution_Inset.triggered.connect(self.riAnalysis)
     self.ui.actionSlice_Profile.triggered.connect(self.sliceProfileAnalysis)
     self.ui.actionSlice_Profile_Setup.triggered.connect(self.sliceProfileSetup)
+    self.ui.actionLC_Thermometer.triggered.connect(self.LCThermometerAnalysis)
     self.ui.actionDiffusion.triggered.connect(self.diffusionAnalysis)
     self.ui.actionPhase_Unwrap.triggered.connect(self.unWrapCurrentImage)
     self.ui.actionPlane_Background_Subtract.triggered.connect(self.planeBackgroundSubtract)
@@ -298,7 +299,7 @@ class PhantomViewer(QMainWindow):
     self.relativeOffsetv = 0.0
     self.redrawROIs()
         
- 
+#**************** Standard Phantoms *******************
   def SystemPhantom (self):
     self.setupPhantom(SystemPhantom.SystemPhantom())
    
@@ -309,7 +310,8 @@ class PhantomViewer(QMainWindow):
 
   def BreastPhantom (self):
     pass
-  
+
+#*************NIST specific phantoms******************  
   def NISThcpPhantom (self):
     self.setupPhantom(NISThcpPhantom.hcpPhantom())
       
@@ -348,7 +350,7 @@ class PhantomViewer(QMainWindow):
     self.DICOMDIRlist.ui.lblDICOMDIR.setText(filename)
     dv=self.DICOMDIRlist.ui.listDICOMDIR
     for patrec in dcmdir.patient_records:
-      s = "Patient: {0.PatientID}: {0.PatientsName}".format(patrec)
+      s = '' #"Patient: {0.PatientID}: {0.PatientsName}".format(patrec)
       studies = patrec.children
       for study in studies:
             s= s + "    Study {0.StudyID}: {0.StudyDate}".format(study)
@@ -383,7 +385,7 @@ class PhantomViewer(QMainWindow):
               nFiles= len(image_filenames)
               dialogBox = QProgressDialog(labelText = 'Importing Files...',minimum = 0, maximum = nFiles)
               dialogBox.setCancelButton(None)
-              dsets= [dicom.read_file(image_filename)for image_filename in image_filenames]
+              dsets= [pydicom.read_file(image_filename)for image_filename in image_filenames]
               for i,dcds in enumerate(dsets):   #unpack DICOM data sets (dcds)
                 self.ds.unpackImageFile (dcds, image_filenames[i], "dcm")
                 #d1.append(self.ds.PA[i+1])
@@ -573,9 +575,10 @@ class PhantomViewer(QMainWindow):
         for roi in self.currentROIs.ROIs:
             r=np.array([roi.Xcenter,roi.Ycenter,roi.Zcenter])
             imCoord=self.GlobaltoRel(r,self.nCurrentImage)
+            lab=roi.Label            
             if roi.Label =='nolabel':
               lab=''
-            else:
+            if roi.Label =='index':
               lab=str(roi.Index)
             if roi.Type=="Sphere":
               pgroi=fCircleROI(self,[imCoord[0]-roi.d1/2, imCoord[1]-roi.d1/2], [roi.d1, roi.d1],lab, pen=self.roiPen)  #needs work
@@ -716,9 +719,7 @@ class PhantomViewer(QMainWindow):
 
   def rotate90X(self):
     for roi in self.currentROIs.ROIs:
-      print (roi.Xcenter,roi.Ycenter,roi.Zcenter)
       roi.Xcenter,roi.Ycenter,roi.Zcenter=roi.Xcenter,-roi.Zcenter,roi.Ycenter
-      print (roi.Xcenter,roi.Ycenter,roi.Zcenter)
     self.redrawROIs()
     
   def rotate90Y(self):
@@ -728,7 +729,7 @@ class PhantomViewer(QMainWindow):
 
   def rotate90Z(self):
     for roi in self.currentROIs.ROIs:
-      roi.Zcenter=-roi.Zcenter
+      roi.Xcenter,roi.Ycenter,roi.Zcenter=roi.Ycenter,-roi.Xcenter,roi.Zcenter
     self.redrawROIs() 
     
   def translateROIs(self,tvector,snap, roiindex):
@@ -894,7 +895,7 @@ class PhantomViewer(QMainWindow):
     self.reverseTEOrder = not self.reverseTEOrder  #toggle order 
          
   def unWrapCurrentImage(self):
-    '''unwraps a phase image using '''
+    '''unwraps a phase image using skimage.restoration.unwrap'''
     self.operateOnAll=self.ui.cbOperateOnAllImages.isChecked()
     if self.nCurrentImage > 0:
       if self.operateOnAll == False:
@@ -1019,6 +1020,7 @@ class PhantomViewer(QMainWindow):
     self.displayCurrentImage()  
  
   def imageSubtraction(self):
+    '''Subtracts designaed image from all of the images in a stack'''
     text, ok = QInputDialog.getText(self, 'Image Subtraction', 'Image number to be subtracted:')
     iscale=1.
     i=int(text)
@@ -1332,7 +1334,7 @@ class PhantomViewer(QMainWindow):
     rd = np.zeros((len(self.pgROIs),len(self.reducedImageSet)))     #array containing raw data average signal in each ROI for each image
     std = np.zeros((len(self.pgROIs),len(self.reducedImageSet)))    #array containing raw data standard deviation of signal in each ROI for each image
     bgROI = np.zeros((len(self.pgROIs),len(self.reducedImageSet)))    #array containing background signal around each ROI for each signal
-# Set independent variable (parameter that is being varied ie TI, TE, TR, b etc
+# Set independent variable (parameter that is being varied ie TI, TE, TR, b, T etc
 # T1 data
     if self.dataType == "T1":
       if self.ui.tabT1.currentIndex() == 0: #T1 Inversion Recovery
@@ -1400,11 +1402,20 @@ class PhantomViewer(QMainWindow):
         self.msgPrint ( "{:12.1f}".format(pd))
       self.msgPrint (os.linesep)
     self.dataHeader=self.ui.txtResults.toPlainText()
+#Thermometer Data
+    if self.dataType == "LCTherm":
+      self.rdPlot.setLogMode(x=False,y=False)
+      self.rdx = np.array([roi.Value for roi in self.currentROIs.ROIs])
+      self.msgPrint ( "LC Temperature Indicator (C)=")
+      for T in self.rdx: #note that the first image is a blank dummy
+        self.msgPrint ( "{:12.1f}".format(T))
+      self.msgPrint (os.linesep)
+    self.dataHeader=self.ui.txtResults.toPlainText()
 #Set and Plot raw signal data  
     for i, roi in enumerate(self.pgROIs):
       self.msgPrint ("ROI-" +"{:02d}".format(i+1) + '    ') 
       for j, pa in enumerate([self.ds.PA[k] for k in self.reducedImageSet]):
-        array = roi.getArrayRegion(pa,self.imv.getImageItem())   
+        array = roi.getArrayRegion(pa,self.imv.getImageItem())  #gets masked voxel array for ROI region   
         rd[i ,j]= (array.mean()-self.ds.ScaleIntercept[self.reducedImageSet[j]])/self.ds.ScaleSlope[self.reducedImageSet[j]] #corrects for scaling in Phillips data
         self.msgPrint ( "{:12.3f}".format(rd[i,j]) )
         std[i ,j]=array.std()       #does not have Phillips scaling
@@ -1426,7 +1437,7 @@ class PhantomViewer(QMainWindow):
       for j, pa in enumerate([self.ds.PA[k] for k in self.reducedImageSet]):
         self.msgPrint ( "{:12.3f}".format(bgROI[i,j]) )
       self.msgPrint (os.linesep)      
-    if self.dataType == "PD-SNR": #raw data is a 1d array signal vs ROI.PD
+    if self.dataType == "PD-SNR" or self.dataType == "LCTherm": #raw data is a 1d array signal vs ROI.PD
       for k in range(len(self.reducedImageSet)):
         self.rdPlot.plot(self.rdx, rd[:,k],pen=self.setPlotColor(k),symbolBrush=self.setPlotColor(0), symbolPen='w', name=self.currentROIs.ROIs[0].Name)
     if self.dataType == "Dif" and self.ADCmap: #raw data is a 1d array signal vs ROI.Index
@@ -1454,7 +1465,7 @@ class PhantomViewer(QMainWindow):
         self.msgPrint('noise = ' + str(self.noise))
       else:
         self.msgPrint('did not find 2 images for noise = analysis')
-    self.line1 = pg.InfiniteLine(movable=True, angle=90, label='x={value:0.3f}', 
+    self.line1 = pg.InfiniteLine(pos=np.average(self.rdx),  movable=True, angle=90, label='x={value:0.3f}', 
                 labelOpts={'position':0.1, 'color': (200,200,100), 'fill': (200,200,200,50), 'movable': True})
     self.line2 = pg.InfiniteLine( movable=True, angle=0, pen=(0, 0, 200),  hoverPen=(0,200,0), label='y={value:0.3f}', 
                 labelOpts={'color': (200,200,100), 'movable': True, 'fill': (200,200,200,50)})
@@ -1489,6 +1500,10 @@ class PhantomViewer(QMainWindow):
           self.fitDifData(self.rdx,self.rdy) 
         if self.ADCmap:
           self.showADCmap()
+      if self.dataType == "LCTherm":
+        self.resultsLogModeX=False
+        self.resultsLogModeY=False  
+        self.fitLCTherm(self.rdx,self.rdy[:,0])  
       self.resultsPlot.setLogMode(x=self.resultsLogModeX,y=self.resultsLogModeY) 
       self.fitLog=self.messageLog
       self.messageLogOn=False
@@ -1770,6 +1785,25 @@ class PhantomViewer(QMainWindow):
   def fitPDSNR(self):
     self.msgPrint('PD-SNR')
     
+  def fitLCTherm(self,Tc,data):
+      """Fits LCTherm data"""
+      self.fitx =np.amin(Tc)+np.arange(100) * (np.amax(Tc)-np.amin(Tc)) /100  #generate Ts for fit plot
+      self.fity=np.zeros(100)
+      self.msgPrint ("LC Thermometer fit summary" + os.linesep)
+      params=LCPowerLawFit.initialize (Tc,data)
+      pdicti=params[0] #parameter dictionary
+      plist=params[1] #parameter list
+      out = lmfit.minimize(LCPowerLawFit.model,pdicti,args=(Tc,data))
+      pdict=out.params
+      self.msgPrint('T={:4.2f}, gamma={:4.3f}'.format(pdict['T'].value,pdict['gamma'].value))
+      self.Temperature=float(pdict['T'].value)
+
+      self.ui.lcdTemp.display(self.Temperature)
+      self.fity= LCPowerLawFit.model(pdict, self.fitx, np.zeros(len(self.fitx)))
+      self.resultsPlot.clear()
+      self.resultsPlot.plot(Tc,data ,pen=self.setPlotColor(0),symbolBrush=self.setPlotColor(0), symbolPen='w')
+      self.resultsPlot.plot(self.fitx,self.fity ,pen=self.setPlotColor(1))
+
   def replotResults(self):
       self.resultsPlot.clear()
       if self.ui.rbResultsY.isChecked():
@@ -2079,6 +2113,10 @@ class PhantomViewer(QMainWindow):
       self.dataType = "PD-SNR"
       self.setDataType(self.dataType)
       
+  def LCThermometerAnalysis(self):
+      self.dataType = "LCTherm"
+      self.setDataType(self.dataType)      
+      
   def RIAnalysis(self):
       self.dataType = "RI"
       self.setDataType(self.dataType)
@@ -2140,6 +2178,16 @@ class PhantomViewer(QMainWindow):
     if dataType == "RI":    #resolution inset
       self.ui.stackedModels.setCurrentIndex(5)
       self.ROIset = "RI"   #determines which ROI set to use via ROIsetdict
+    if dataType == "LCTherm":
+      self.setWindowTitle(self.wTitle + 'Liquid Crytal Thermometer Analysis')
+      self.rdPlot.setTitle("LCTherm raw data")
+      self.rdPlot.setLabel('left', "Ave. Counts", units='A')
+      self.rdPlot.setLabel('bottom', "Temperature(C)")
+      self.resultsPlot.setTitle("Temperature Results")
+      self.roiPen = pg.mkPen('y', width=3)
+      self.ROIset = "LCTherm"   #determines which ROI set to use via ROIsetdict
+      self.ui.stackedModels.setCurrentIndex(6) 
+
     if dataType == "":
       self.setWindowTitle(self.wTitle)
       self.rdPlot.setLabel('left', "Counts", units='A')

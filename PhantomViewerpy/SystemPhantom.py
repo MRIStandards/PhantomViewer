@@ -43,7 +43,7 @@ P1NiCl2 = -0.01835
 P2NiCl2 = 0.00894
 P0MnCl2 = 32.1
 P1MnCl2 = 27.3
-DataTypes={"FA":0,"T1":1,"T2":2,"PD":3,"SP":4,"RI":5, "SNR":6}
+DataTypes={"FA":0,"T1":1,"T2":2,"PD":3,"SP":4,"RI":5, "SNR":6,"LCTherm":6}
 spXCenter1 = 14.    #nominal slice profile wedge locations
 spYCenter1 = -32.
 spZCenter1 = 0.
@@ -53,6 +53,7 @@ spZCenter2 = 0.
 spWidth = 4.        #width of slice profile ROIs in mm
 spLength = 54.      #Length of slice profile ROI in mm 
 SPangle = 10. * np.pi / 180.
+commercialSystemPhantom=True  #commercial phantom flag 
 phantomReferenceData='Keenan ISMRM 3290 2016 @20C' 
 NiArrayConcentration=[0.299, 0.623,1.072,1.72,2.617,3.912,5.731,8.297,11.936,17.07,24.326,34.59,49.122,69.68]
 NiArrayT1_1p5T=[2033,1489,1012,730.8,514.1,367.9,260.1,184.6,132.7,92.7,65.4,46.32,32.45,22.859]
@@ -69,6 +70,7 @@ MnArrayT2_3T=[581.3,403.5,278.1,190.94,133.27,96.89,64.07,46.42,31.97,22.56,15.8
 # MnArrayConcentration=[0.01206,0.01989,0.03076,0.04663,0.06879,0.1001,0.14442,0.20705,0.29565,0.42094,0.59814,0.84873,1.20313,1.70431]
 # MnArrayT2=[724.1,512.,364.,256.,181.,128.,90.5,64.,45.3,32.,22.6,16.,11.3,8.0]
 PDArrayPD=[5.,10.,15.,20.,25.,30.,35.,40.,50.,60.,70.,80.,90.,100.]
+
 comment = "http://collaborate.nist.gov/mriphantoms/bin/view/MriPhantoms/MRISystemPhantom"
 fiducialT1=100.0
 fiducialT2=50.0
@@ -94,6 +96,12 @@ RIframeLL=np.array([-RIfrw/2,-RIfrh/2])
 RIsize=np.array([RIfrw,RIfrh])
 RIxoffset=15.0
 RIzoffset=-0.5
+#thermometer
+TempArray=[15.0, 16.0,17.0,18.0,19.0,20.0,21.0,22.0,23.0,24.0]  #transition temperatures of 10-element liquid crystal thermometer
+ThermCellDiameter=5   #5mm cells
+ThermCellX=[24.3,15.3,10.2,5.1,0,-5.1,-10.2,-15.3,-20.4,-25.5]  #Position of the liquid crystal thermometer cells
+ThermCellZ=[-4,4,-4,4,-4,4,-4,4,-4,4]
+
 
 
 class SystemPhantom(VPhantom.VPhantom):
@@ -157,6 +165,10 @@ class SystemPhantom(VPhantom.VPhantom):
 
     self.SPROIs=self.SetSliceProfileROIs('SP')
     self.ROIsets.append (self.SPROIs)
+    
+    
+    self.TempROIs=self.SetThermometerROIs('LCTherm')
+    self.ROIsets.append (self.TempROIs)
         
   def SetDefaultContrastROIs(self,ptype):
   #set initial system phantom contrast ROIs
@@ -272,7 +284,7 @@ class SystemPhantom(VPhantom.VPhantom):
   
   def SetDefaultFiducialROIs(self, ptype):
       '''Defines 57 fiducial spheres, step first in x (LR), then z(SI), then, y(AP)
-       from Plate1 to Plate5'''
+       from Plate1 to Plate5; commercial system phantoms do not have FId. 57 which is next to fill port'''
       r=VPhantom.ROISet(ptype)
       #ri=VPhantom.ROISet(ptype)
       r.ROIName =  ptype + "Array"
@@ -324,6 +336,9 @@ class SystemPhantom(VPhantom.VPhantom):
                          r.ROIs[-1].symbol=fidSymbol['inferior']
                          
                        nindex +=1
+      if commercialSystemPhantom:
+        del r.ROIs[54]
+        del r.initialROIs[54]
       r.nROIs=len(r.ROIs)
       return r
     
@@ -357,7 +372,27 @@ class SystemPhantom(VPhantom.VPhantom):
       r.ROIs.append(roi)
       r.nROIs=len(r.ROIs)
       return r
-    
+
+  def SetThermometerROIs(self, ptype):
+      '''Defines 10 fliquid crytal thermometer cells'''
+      r=VPhantom.ROISet(ptype)
+      #ri=VPhantom.ROISet(ptype)
+      r.ROIName =  ptype + "Array"
+      r.Field = 1.5
+      r.Temperature = 20.
+      for i in range (10):
+        r.ROIs.append(VPhantom.ROI())
+        r.ROIs[-1].Name = ptype + "-" +str(TempArray[i])
+        r.ROIs[-1].Index = i+1
+        r.ROIs[-1].Label = str(TempArray[i])
+        r.ROIs[-1].Value = TempArray[i]
+        r.ROIs[-1].d1 = ThermCellDiameter
+        r.ROIs[-1].Xcenter = ThermCellX[i]
+        r.ROIs[-1].Zcenter = ThermCellZ[i]
+        r.ROIs[-1].Ycenter = 0
+      r.nROIs=len(r.ROIs)
+      return r
+        
   def createResArray(self):
     '''creates a hole array consisting of five 4x4+rotated(4x4) holes of different sizes'''
     holearray=[]  #array of holes (x,y,diameter) all in mm

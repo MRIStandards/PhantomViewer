@@ -145,19 +145,19 @@ class ImageList():
             
   def addFile(self,fileName):  
     extension = str(fileName.split(".")[-1])
-    #try:
-    if extension.lower() == "dcm" or extension==fileName or extension.lower() == "ima": # if .dcm , .ima or  no extension try dicom
+    try:
+      if extension.lower() == "dcm" or extension==fileName or extension.lower() == "ima": # if .dcm , .ima or  no extension try dicom
           self.unpackImageFile (pydicom.read_file(str(fileName)), fileName, "dcm")
-    elif extension.lower() == "tif":
+      elif extension.lower() == "tif":
           #self.ds.PA.append(Image.open(str(fileName)))
           self.unpackImageFile (Image.open(str(fileName)), fileName, "tif")
-    elif extension.lower() == "fdf":
+      elif extension.lower() == "fdf":
           VData=VarianData()
           self.unpackImageFile (VData.read(str(fileName)), fileName, "fdf")
-    else:
+      else:
           self.unpackImageFile (pydicom.read_file(str(fileName)), fileName, "dcm")    #if the extension cannot be recognized try DICOM
-#     except:
-#       return [False,"Error: Image file cannot be opened:" + fileName]
+    except:
+       return [False,"Error: Image file cannot be opened:" + fileName]
     return [True, fileName]
         
   def    writeDicomFiles(self, filename):         

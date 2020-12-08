@@ -40,7 +40,7 @@ class fiducialWindow():
     self.win.resize(800,600)
     self.imv = pg.ImageView( view = pg.PlotItem())
     #self.imv.getView().invertY(False)
-    self.imv.ui.histogram.plot.setLogMode(None,True)    #set the histogram y axis to a log scale    
+    #self.imv.ui.histogram.plot.setLogMode(None,True)    #set the histogram y axis to a log scale    
     self.imv.ui.roiBtn.setText("Line scan/ROI")
     self.win.setCentralWidget(self.imv)
     self.win.setWindowTitle('Fiducial Array')
@@ -754,12 +754,15 @@ class fiducialWindow():
         yp=-mousePoint.y()
         xp=self.vCenter(np.array([self.imv.currentIndex,0,0,]))[0]   #convert index to position
       ijk=self.rtoIndex([xp,yp,zp])
-      if abs(mousePoint.x()) < self.fovh/2 and abs(mousePoint.y()) < self.fovh/2:
-        value=self.currentArray[int(ijk[0]),int(ijk[1]),int(ijk[2])] 
-        #self.label.setText("x={:.2f}, y={:.2f}, value={:.2f}".format(mousePoint.x(),mousePoint.y(), value ))
-        self.win.setWindowTitle("i,j,k={:.2f},{:.2f},{:.2f}; x={:.2f}, y={:.2f}, z={:.2f}, value={:.2f}".format(ijk[0],ijk[1],ijk[2],xp,yp,zp, value ))
-      else:
-        self.win.setWindowTitle(self.windowTitle)
+      try:
+        if abs(mousePoint.x()) < self.fovh/2 and abs(mousePoint.y()) < self.fovh/2:
+          value=self.currentArray[int(ijk[0]),int(ijk[1]),int(ijk[2])] 
+          #self.label.setText("x={:.2f}, y={:.2f}, value={:.2f}".format(mousePoint.x(),mousePoint.y(), value ))
+          self.win.setWindowTitle("i,j,k={:.2f},{:.2f},{:.2f}; x={:.2f}, y={:.2f}, z={:.2f}, value={:.2f}".format(ijk[0],ijk[1],ijk[2],xp,yp,zp, value ))
+        else:
+          self.win.setWindowTitle(self.windowTitle)
+      except:
+        pass
       self.vLine.setPos(mousePoint.x())
       self.hLine.setPos(mousePoint.y())
     
@@ -774,6 +777,7 @@ class fCircleROI(pg.EllipseROI):
         self.aspectLocked = True
         self.label = pg.TextItem(label, labelcolor, anchor = (0,0))
         self.label.setPos(pos[0],pos[1])
+        self.path=None    #added when updating to pyqtgraph 0.11 Do not know why it is not there
         
 class messageWindow():
   def __init__(self, image=None, parent = None):
@@ -814,19 +818,20 @@ class plotWindow(QMainWindow):
             self.dplot = pg.PlotWidget()
             self.win=self
             self.win.setCentralWidget(self.dplot)
-            self.win.resize(900,500)
+            self.win.resize(1000,500)
             self.win.setWindowTitle('Fiducial Data')
             self.pw=pw
             self.menu = self.menuBar()
             self.BG='black'  #flag to set background color
             self.bgLabelColor='#FFF'
-            tfont=QFont('Helvetica', 20)
-            self.dplot.getAxis("bottom").tickFont = tfont
-            self.dplot.getAxis("bottom").setStyle(tickTextOffset=15)
+            self.tfont=QFont('Times', 20) #Times, Helvetica
+            self.ticktextSize=20    #tick text size
+            self.dplot.getAxis("bottom").tickFont = self.tfont
+            self.dplot.getAxis("bottom").setStyle(tickTextOffset=15, tickTextHeight=100, tickTextWidth=100)
             self.dplot.getAxis("left").setStyle(tickTextOffset=5)
             self.dplot.getAxis("left").setWidth(90)
-            self.dplot.getAxis("left").tickFont = tfont
-            self.dplot.getAxis("right").tickFont = tfont
+            self.dplot.getAxis("left").tickFont = self.tfont
+            self.dplot.getAxis("right").tickFont = self.tfont
             self.yLabelSize='24pt'
             self.xLabelSize='24pt'
             self.titleSize='24pt'
@@ -836,6 +841,7 @@ class plotWindow(QMainWindow):
             self.symb=['o', 't', 's', 'd',  '+']  #symbol list for multiple plots circle, triangle, start, diamond
             self.symbolColor=['k', 'b', 'r','g', 'c', 'm', 'k']
             self.nplot=0
+            self.penm = fn.mkPen(255, 0, 255)
             cc='rgb'+str(SystemPhantom.fidColor['center'])
             cl='rgb'+str(SystemPhantom.fidColor['left'])
             cr='rgb'+str(SystemPhantom.fidColor['right'])
@@ -931,15 +937,20 @@ class plotWindow(QMainWindow):
       def plotData(self,x,y,ylabel='ylabel',wintitle='', clearPlot=False,symbolBrush=None,xlabelsize='18pt'):
         if clearPlot:
           self.dplot.clear()
+        self.dplot.plot(x, y, pen=None, symbolBrush=symbolBrush, symbol=self.pw.fiducialSymbols,symbolSize=self.symbolSize)
         self.setWindowTitle(wintitle +ylabel +', ' + self.pw.filename)
         self.dplot.setTitle(self.dpTitle,size=self.titleSize)
+        self.tfont.setPixelSize(self.ticktextSize)
+        self.dplot.getAxis("bottom").setTickFont(self.tfont)
+        self.dplot.getAxis("bottom").setStyle(tickTextOffset = int(self.ticktextSize/2))
+        self.dplot.getAxis("left").setTickFont(self.tfont)
+        self.dplot.getAxis("left").setStyle(tickTextOffset = int(self.ticktextSize/2))
         self.dplot.setLabel('bottom',"|R-R<sub>0</sub>|(mm)",color=self.bgLabelColor, font=self.xLabelSize)
         self.dplot.setLabel('left',ylabel,color=self.bgLabelColor, font=self.yLabelSize )
         self.dplot.getAxis('right').setStyle(showValues=False)
         self.dplot.showAxis('right')
         self.dplot.getAxis('top').setStyle(showValues=False)
         self.dplot.showAxis('top')
-        self.dplot.plot(x, y, pen=None,  symbolBrush=symbolBrush, symbol=self.pw.fiducialSymbols,symbolSize=self.symbolSize)
 
           
       def saveData(self):        
@@ -949,14 +960,19 @@ class plotWindow(QMainWindow):
         if self.BG=='black':  #switch to white background
           self.dplot.setBackground('w')
           self.dplot.getAxis("bottom").setPen('k')
+          self.dplot.getAxis("bottom").setTextPen('k')
           self.dplot.getAxis("left").setPen('k')
+          self.dplot.getAxis("left").setTextPen('k')
           self.dplot.getAxis("right").setPen('k')
           self.BG='white'
           self.bgLabelColor='k'
+          self.textPen=self.penm
         else: #switch to black background
           self.dplot.setBackground('k')
           self.dplot.getAxis("bottom").setPen('w')
+          self.dplot.getAxis("bottom").setTextPen('w')
           self.dplot.getAxis("left").setPen('w')
+          self.dplot.getAxis("left").setTextPen('w')
           self.dplot.getAxis("right").setPen('w')
           self.bgLabelColor='w'
           self.BG='black'

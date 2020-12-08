@@ -1,14 +1,16 @@
 '''
 Created on Dec 29, 2014
 Uses DICOMDIRGui.py created from DICOMDIRGui.ui by QT4
-  execute   "pyuic4 DICOMDIRGui.ui -o DICOMDIRGui.py" 
+  execute   "designer\pyuic4 designer\DICOMDIRGui.ui -o PhantomViewerpy\DICOMDIRGui4.py" 
+            "designer\pyuic5 designer\DICOMDIRGui.ui -o PhantomViewerpy\DICOMDIRGui5.py"
 @author: stephen russek
 '''
 try:
   from PyQt4 import QtGui, QtCore
+  from DICOMDIRGui4 import Ui_DICOMDIRGui
 except:
   from PyQt5 import QtGui, QtCore
-from DICOMDIRGui import Ui_DICOMDIRGui
+  from DICOMDIRGui5 import Ui_DICOMDIRGui
 
 class DICOMDIRlist(QtGui.QDialog):
     def __init__(self ,parent = None):
