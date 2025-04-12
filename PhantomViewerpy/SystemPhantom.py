@@ -44,32 +44,47 @@ P2NiCl2 = 0.00894
 P0MnCl2 = 32.1
 P1MnCl2 = 27.3
 DataTypes={"FA":0,"T1":1,"T2":2,"PD":3,"SP":4,"RI":5, "SNR":6,"LCTherm":6}
-spXCenter1 = 14.    #nominal slice profile wedge locations
+spXCenter1 = 14.5    #nominal slice profile wedge locations in mm
 spYCenter1 = -32.
 spZCenter1 = 0.
-spXCenter2 = 22.
+spXCenter2 = 22.5
 spYCenter2 = -32.
 spZCenter2 = 0.
-spWidth = 4.        #width of slice profile ROIs in mm
-spLength = 54.      #Length of slice profile ROI in mm 
+spWidth = 6.        #width of slice profile ROIs in mm
+spLength = 60.      #Length of slice profile ROI in mm 
 SPangle = 10. * np.pi / 180.
-commercialSystemPhantom=True  #commercial phantom flag 
-phantomReferenceData='Keenan ISMRM 3290 2016 @20C' 
-NiArrayConcentration=[0.299, 0.623,1.072,1.72,2.617,3.912,5.731,8.297,11.936,17.07,24.326,34.59,49.122,69.68]
-NiArrayT1_1p5T=[2033,1489,1012,730.8,514.1,367.9,260.1,184.6,132.7,92.7,65.4,46.32,32.45,22.859]
-NiArrayT1_3T=[1989,1454,984.1,706,496.7,351.5,247.13,175.3,125.9,89,62.7,44.53,30.84,21.719]
-NiArrayT2_1p5T=[1669,1244,859.3,628.5,446.3,321.2,227.7,161.9,117.1,81.9,57.7,41,28.7,20.2]
-NiArrayT2_3T=[1465,1076,717.9,510.1,359.6,255.5,180.8,127.3,90.3,64.3,45.7,31.86,22.38, 15.83]
-MnArrayConcentration=[0.013,0.021,0.031,0.047,0.069,0.101,0.145,0.207,0.296,0.421,0.599,0.849,1.104,1.704]
-MnArrayT1_1p5T=[2376,2183,1870,1539,1237,1030,752.2,550.2,413.4,292.9,194.9,160.2,106.4,83.33]
-MnArrayT1_3T=[2480,2173,1907,1604,1332,1044,801.7,608.6,458.4,336.5,244.2,176.6,126.9,90.9]
-MnArrayT2_1p5T=[939.4,594.3,416.5,267,184.9,140.6,91.76,64.84,45.28,30.62,19.76,15.99,10.47,8.15]
-MnArrayT2_3T=[581.3,403.5,278.1,190.94,133.27,96.89,64.07,46.42,31.97,22.56,15.813,11.237,7.911,5.592]
+
+commercialSystemPhantom=True  #commercial phantom flag, will delete fudicial sphere #56
+#Phantom reference data at 20C, full reference data contains several different temperature points 
+phantomReferenceData='PLL2020' #Phantom Lending Library Calibration. For solutions used in SN 130-0133 through SB 130-0134
+NiArrayConcentrationPLL2020=[0.29,  0.6,  1.04,  1.64,  2.52,  3.68,  5.43,  7.74,  11.3,  16.5,  23.3,  32.7,  46,  65.3]
+NiArrayT1_3TPLL2020=[1883.965,  1330.163,  987.267,  690.076,  484.97,  341.583,  240.864,  174.95,  121.077,  85.746,  60.212,  42.888,  30.4,  21.441]
+NiArrayT2_3TPLL2020=[1489.406,  1026.78,  736.968,  521.267,  354.384,  248.03,  174.99,  126.33,  86.908,  60.863,  42.44,  30.663,  21.762,  15.299]
+MnArrayConcentrationPLL2020=[0.0108,0.0181,0.0282,0.0434,0.0626,0.0934,0.1353,0.193,0.2768,0.4276,0.5555,0.7902,1.1274,1.5996]
+MnArrayT1_3TPLL2020=[2478.185,2185.538,1901.281,1549.984,1197.565,1026.433,805.101,599.964,431.217,292.866,226.528,158.167,116.697,82.458]
+MnArrayT2_3TPLL2020=[552.733,379.484,267.289,175.053,112.664,88.889,63.423,44.241,29.884,19.395,14.735,10.521,7.269,5.097]
+NiArrayT1_1p5TPLL2020=[1883.965,  1330.163,  987.267,  690.076,  484.97,  341.583,  240.864,  174.95,  121.077,  85.746,  60.212,  42.888,  30.4,  21.441]
+NiArrayT2_1p5TPLL2020=[1489.406,  1026.78,  736.968,  521.267,  354.384,  248.03,  174.99,  126.33,  86.908,  60.863,  42.44,  30.663,  21.762,  15.299]
+MnArrayT1_1p5TPLL2020=[2478.185,2185.538,1901.281,1549.984,1197.565,1026.433,805.101,599.964,431.217,292.866,226.528,158.167,116.697,82.458]
+MnArrayT2_1p5TPLL2020=[552.733,379.484,267.289,175.053,112.664,88.889,63.423,44.241,29.884,19.395,14.735,10.521,7.269,5.097]
+
+#phantomReferenceData='K3290' #'Keenan ISMRM 3290 2016 @20C' For solutions used in prototype phantoms and SN 130-0001 through SB 130-0041
+NiArrayConcentrationK3290=[0.299, 0.623,1.072,1.72,2.617,3.912,5.731,8.297,11.936,17.07,24.326,34.59,49.122,69.68]
+NiArrayT1_1p5TK3290=[2033,1489,1012,730.8,514.1,367.9,260.1,184.6,132.7,92.7,65.4,46.32,32.45,22.859]
+NiArrayT1_3TK3290=[1989,1454,984.1,706,496.7,351.5,247.13,175.3,125.9,89,62.7,44.53,30.84,21.719]
+NiArrayT2_1p5TK3290=[1669,1244,859.3,628.5,446.3,321.2,227.7,161.9,117.1,81.9,57.7,41,28.7,20.2]
+NiArrayT2_3TK3290=[1465,1076,717.9,510.1,359.6,255.5,180.8,127.3,90.3,64.3,45.7,31.86,22.38, 15.83]
+MnArrayConcentrationK3290=[0.013,0.021,0.031,0.047,0.069,0.101,0.145,0.207,0.296,0.421,0.599,0.849,1.104,1.704]
+MnArrayT1_1p5TK3290=[2376,2183,1870,1539,1237,1030,752.2,550.2,413.4,292.9,194.9,160.2,106.4,83.33]
+MnArrayT1_3TK3290=[2480,2173,1907,1604,1332,1044,801.7,608.6,458.4,336.5,244.2,176.6,126.9,90.9]
+MnArrayT2_1p5TK3290=[939.4,594.3,416.5,267,184.9,140.6,91.76,64.84,45.28,30.62,19.76,15.99,10.47,8.15]
+MnArrayT2_3TK3290=[581.3,403.5,278.1,190.94,133.27,96.89,64.07,46.42,31.97,22.56,15.813,11.237,7.911,5.592]
+
 # NiArrayConcentration=[0.299,0.620,1.074,1.716,2.624,3.908,5.724,8.293,11.93,17.06,24.33,34.60,49.13,69.67]
 # NiArrayT1=[2047.7,1448.1,1024.,724.1,512.,362.1,256.,181.,128.,90.5,64.,45.3,32.,22.6]
 # MnArrayConcentration=[0.01206,0.01989,0.03076,0.04663,0.06879,0.1001,0.14442,0.20705,0.29565,0.42094,0.59814,0.84873,1.20313,1.70431]
 # MnArrayT2=[724.1,512.,364.,256.,181.,128.,90.5,64.,45.3,32.,22.6,16.,11.3,8.0]
-PDArrayPD=[5.,10.,15.,20.,25.,30.,35.,40.,50.,60.,70.,80.,90.,100.]
+
 
 comment = "http://collaborate.nist.gov/mriphantoms/bin/view/MriPhantoms/MRISystemPhantom"
 fiducialT1=100.0
@@ -110,8 +125,9 @@ class SystemPhantom(VPhantom.VPhantom):
     VPhantom.VPhantom.__init__(self)
     self.phantomName = "NIST-ISMRM MRI System Phantom"
     self.phantomReferenceData=phantomReferenceData
+    self.setReferenceData(self.phantomReferenceData)
     self.Comment = comment
-    self.phantomImage = "..\icons\MRISystemPhantom.jpg"
+    self.phantomImage = r"..\icons\MRISystemPhantom.jpg"
     self.ROIsetdict = {'NiArray':0, 'MnArray':1, 'PDArray':2,'FiducialArray':3, 'ResolutionInset':4}
     
     self.NiROIs =self.SetDefaultContrastROIs("Ni")    #sets roi positions
@@ -121,14 +137,14 @@ class SystemPhantom(VPhantom.VPhantom):
 #     NiArrayT2=NiArrayT2_1p5T
 #     MnArrayT1=MnArrayT1_1p5T
 #     MnArrayT2=MnArrayT2_1p5T    
-    NiArrayT1=NiArrayT1_3T
-    NiArrayT2=NiArrayT2_3T
-    MnArrayT1=MnArrayT1_3T
-    MnArrayT2=MnArrayT2_3T        
+    self.NiArrayT1=self.NiArrayT1_3T
+    self.NiArrayT2=self.NiArrayT2_3T
+    self.MnArrayT1=self.MnArrayT1_3T
+    self.MnArrayT2=self.MnArrayT2_3T        
     for roi in self.NiROIs.ROIs:    #sets T1, concentration
-      roi.T1=NiArrayT1[roi.Index-1]
-      roi.T2=NiArrayT2[roi.Index-1]
-      roi.Concentration=NiArrayConcentration[roi.Index-1]
+      roi.T1=self.NiArrayT1[roi.Index-1]
+      roi.T2=self.NiArrayT2[roi.Index-1]
+      roi.Concentration=self.NiArrayConcentration[roi.Index-1]
     self.ROIsets.append(self.NiROIs)
     
     self.MnROIs =self.SetDefaultContrastROIs("Mn")
@@ -136,9 +152,9 @@ class SystemPhantom(VPhantom.VPhantom):
     self.MnROIs.ROIColor = 'r'
     self.MnROIs.showBackgroundROI=False    #flag to show background ROI to determine if an ROI should be discarded
     for roi in self.MnROIs.ROIs:    #sets T2, concentration
-      roi.T1=MnArrayT1[roi.Index-1]
-      roi.T2=MnArrayT2[roi.Index-1]
-      roi.Concentration=MnArrayConcentration[roi.Index-1]
+      roi.T1=self.MnArrayT1[roi.Index-1]
+      roi.T2=self.MnArrayT2[roi.Index-1]
+      roi.Concentration=self.MnArrayConcentration[roi.Index-1]
     self.ROIsets.append (self.MnROIs)
     
     self.PDROIs =self.SetDefaultContrastROIs("PD")    #sets roi positions
@@ -147,7 +163,7 @@ class SystemPhantom(VPhantom.VPhantom):
     self.PDROIs.showBackgroundROI=True    #flag to show background ROI to determine if an ROI should be discarded
     self.PDROIs.showSNRROI=True           #flag to show a noise ROI to determine noise from an image subtraction
     for roi in self.PDROIs.ROIs:    #sets PD, concentration
-      roi.PD=PDArrayPD[roi.Index-1]
+      roi.PD=self.PDArrayPD[roi.Index-1]
     self.ROIsets.append(self.PDROIs)
     
     self.SNRROIs=self.SetSNRROIs('SNR')
@@ -374,7 +390,7 @@ class SystemPhantom(VPhantom.VPhantom):
       return r
 
   def SetThermometerROIs(self, ptype):
-      '''Defines 10 fliquid crytal thermometer cells'''
+      '''Defines 10 liquid crystal thermometer cells'''
       r=VPhantom.ROISet(ptype)
       #ri=VPhantom.ROISet(ptype)
       r.ROIName =  ptype + "Array"
@@ -416,21 +432,48 @@ class SystemPhantom(VPhantom.VPhantom):
     self.NiROIs.field=b0
     self.MnROIs.field=b0       
     if b0 > 1.4 and b0 < 1.6 :
-        NiArrayT1=NiArrayT1_1p5T
-        NiArrayT2=NiArrayT2_1p5T
-        MnArrayT1=MnArrayT1_1p5T
-        MnArrayT2=MnArrayT2_1p5T
+        self.NiArrayT1=NiArrayT1_1p5T
+        self.NiArrayT2=NiArrayT2_1p5T
+        self.MnArrayT1=MnArrayT1_1p5T
+        self.MnArrayT2=MnArrayT2_1p5T
    
     if b0 > 2.9 and b0 < 3.1:
-        NiArrayT1=NiArrayT1_3T
-        NiArrayT2=NiArrayT2_3T
-        MnArrayT1=MnArrayT1_3T
-        MnArrayT2=MnArrayT2_3T        
+        self.NiArrayT1=NiArrayT1_3T
+        self.NiArrayT2=NiArrayT2_3T
+        self.MnArrayT1=MnArrayT1_3T
+        self.MnArrayT2=MnArrayT2_3T        
     for roi in self.NiROIs.ROIs:    #sets T1, concentration
-      roi.T1=NiArrayT1[roi.Index-1]
-      roi.T2=NiArrayT2[roi.Index-1]
+      roi.T1=self.NiArrayT1[roi.Index-1]
+      roi.T2=self.NiArrayT2[roi.Index-1]
     
     for roi in self.MnROIs.ROIs:    #sets T2, concentration
-      roi.T1=MnArrayT1[roi.Index-1]
-      roi.T2=MnArrayT2[roi.Index-1]
+      roi.T1=self.MnArrayT1[roi.Index-1]
+      roi.T2=self.MnArrayT2[roi.Index-1]
+      
+  def setReferenceData(self,ref):
+    if ref=='PLL2020':
+      self.PDArrayPD=[5.,10.,15.,20.,25.,30.,35.,40.,50.,60.,70.,80.,90.,100.]
+      self.NiArrayConcentration=NiArrayConcentrationPLL2020
+      self.NiArrayT1_1p5T=NiArrayT1_1p5TPLL2020
+      self.NiArrayT1_3T=NiArrayT1_3TPLL2020
+      self.NiArrayT2_1p5T=NiArrayT2_1p5TPLL2020
+      self.NiArrayT2_3T=NiArrayT2_3TPLL2020
+      self.MnArrayConcentration=MnArrayConcentrationPLL2020
+      self.MnArrayT1_1p5T=MnArrayT1_1p5TPLL2020
+      self.MnArrayT1_3T=MnArrayT1_3TPLL2020
+      self.MnArrayT2_1p5T=MnArrayT2_1p5TPLL2020
+      self.MnArrayT2_3T=MnArrayT2_3TPLL2020
+      
+    if ref=='K3290':
+      self.PDArrayPD=[5.,10.,15.,20.,25.,30.,35.,40.,50.,60.,70.,80.,90.,100.]
+      self.NiArrayConcentration=NiArrayConcentrationK3290
+      self.NiArrayT1_1p5T=NiArrayT1_1p5TK3290
+      self.NiArrayT1_3T=NiArrayT1_3TK3290
+      self.NiArrayT2_1p5T=NiArrayT2_1p5TK3290
+      self.NiArrayT2_3T=NiArrayT2_3TK3290
+      self.MnArrayConcentration=MnArrayConcentrationK3290
+      self.MnArrayT1_1p5T=MnArrayT1_1p5TK3290
+      self.MnArrayT1_3T=MnArrayT1_3TK3290
+      self.MnArrayT2_1p5T=MnArrayT2_1p5TK3290
+      self.MnArrayT2_3T=MnArrayT2_3TK3290
                       

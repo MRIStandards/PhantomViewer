@@ -1,81 +1,98 @@
 # -*- coding: utf-8 -*-
-"""
+r"""
 Created on Fri Oct 11 16:30:54 2013
-PhantomViewer: Main class to display and analyze phantom data, mostly MRI data
-modules required (most can be installed using 'pip install package' or  'pip install package --upgrade':
-verify module version using "pip show module"
-   Anaconda 3 with Python 3.7    (64 bit, Python, PyQT5, Numpy, Scipy, Pillow )
-   pydicom Version: 1.4.2:       (for DICOM file import/export)
-   pyqtgraph Version: 0.10.0     (for plotting and image windows)
-   lmfit Version: 1.0.0          (for nonlinear least squares fitting routines)
-   unwrap Version: 0.1.1
-   scikit-image  Version: 0.11.3: uses unwrap_phase from skimage.resoration
-   PyOpenGL                      (Used for 3D plotting)
 
-will work with Anaconda 2 with Python 2.7.11, PYQT4 (not recommended)    
-Uses PhantomViewerGui created from PhantomViewer.ui by Qt Designer
-  convert ui file to python by executing:   
-      "designer\pyuic4 designer\PhantomViewerGui.ui -o PhantomViewerpy\PhantomViewerGui4.py" 
-  or  "designer\pyuic5 designer\PhantomViewerGui.ui -o PhantomViewerpy\PhantomViewerGui5.py" 
-  from system shell to regenerate PhantomViewerGui.py from PhantomViewerGui.ui
+PhantomViewer: Main class to display and analyze phantom data, mostly MRI data
+
 @author: Stephen Russek
 Units: times in ms, distances in mm, ADC in mm2/s, Temperature in C,
 
-VPhantom: class to describe phantoms, several virtual phantoms, including the NIST/ISMRM system phantom are available
-"""
+Modules required (most can be installed using 'pip install package' or  'pip install package --upgrade':
+  verify module version using "pip show module" or "pip list"
+     Anaconda 3 with Python 3.10.9    (64 bit, Python, PyQT5, Numpy, Scipy, Pillow ) usually the latest version will work
+     pydicom Version: 1.4.2:       (pip install pydicom==1.4.2, for DICOM file import/export, **will not work with newest version)
+     pyqtgraph Version: 0.13.3     (pip install pyqtgraph, for plotting and image windows)
+     lmfit Version: 1.2.1          (pip install lmfit, for nonlinear least squares fitting routines)
+     unwrap Version: 0.1.1        (NOT USED)
+     scikit-image  Version: 0.11.3: uses unwrap_phase from skimage.resoration
+     PyOpenGL  version 3.1.7                    (Used for 3D plotting and rendering)
+  
+GUI: Uses PhantomViewerGui created from PhantomViewer.ui by Qt Designer
+  convert ui file to python by executing:   
+  "designer\pyuic5 designer\PhantomViewerGui.ui -o PhantomViewerpy\PhantomViewerGui5.py" 
+  from system shell to regenerate PhantomViewerGui.py from PhantomViewerGui.ui; note pyuic5 is a batch file and needs the location of Python
+  
+To make an executable, pip install pyinstaller==5.1, run command line below with correct path to PhantomViewer.py 
+  pyinstaller --onefile --noconsole --icon=icons\PVicon.ico D:\workspace\PhantomViewer\PhantomViewerpy\PhantomViewer.py
+  or install and use auto-py-to-exe
 
+VPhantom: class to describe phantoms, several virtual phantoms, including the NIST/ISMRM system phantom are available
+
+Example to open the program from Windows command line:
+c:\anaconda3\pythonw.exe D:\workspace\PhantomViewer\PhantomViewerpy\PhantomViewer.py
+
+"""
+modDate='8/30/2024'         # Update modification date every time code is changed
 import sys
-import os             #operating system file/directory names
-import copy           #copies objects eg ROIsets
-import time           # use for time, date and sleep
-import numpy as np
+import os               #operating system file/directory names
+import copy             #copies objects eg ROIsets
+import time             # use for time, date and sleep
+import numpy as np      #All calculations are based on numpy arays
 import numpy.ma as ma   #masked arrays eg ROI arrays
-import threading      # to run tasks such as generating maps in background     
-from pyqt import *         #imports required PyQt modules, tries PyQT4 then PyQt5
-import pydicom        #import pydicom to read DICOM data sets and DICOMDIR
+import threading        # to run tasks, such as generating maps, in background     
+from pyqt import *      #imports correct pyqt version
+import pydicom          #import pydicom to read DICOM data sets and DICOMDIR
 from pydicom.filereader import read_dicomdir
 import pyqtgraph as pg    #uses pyqtgraph PlotWidget for graphs and ImageView windows for images, http://www.pyqtgraph.org/documentation/introduction.html
 import pyqtgraph.opengl as gl
 import pyqtgraph.functions as fn
-import lmfit  #used for nonlinear least square fits,builds on Levenberg-Marquardt algorithm of scipy.optimize.leastsq(),
-from astropy.nddata.utils import block_reduce #used for down sampling images
-#from boto.sdb.db.sequence import double
-#from mpl_toolkits.axes_grid1.anchored_artists import arr
+import lmfit            #used for nonlinear least square fits,builds on Levenberg-Marquardt algorithm of scipy.optimize.leastsq(),
+try:
+  from astropy.nddata.utils import block_reduce #used for down sampling images
+except:
+  pass
 from PIL import Image           #used for resizing 2d images
 from scipy.interpolate import splrep, splev # Bspline representation of a curve and Bspline evaluation
 from scipy.ndimage import zoom   #used for interpolation of images
 from scipy import signal
-try:
-    from unwrap import unwrap   #package for phase unwrapping https://pypi.python.org/pypi/unwrap 
-except:
-  pass
+from scipy import constants
+# try:
+#     from unwrap import unwrap   #package for phase unwrapping https://pypi.python.org/pypi/unwrap 
+# except:
+#   pass
 from skimage.restoration import unwrap_phase
+from processTNT import TNTfile
+from scipy import constants
 
 #PhantomViewer modules
-if pyqtVersion==4:
-  from PhantomViewerGui4 import Ui_PhantomViewerGui    #main window Gui
-if pyqtVersion==5:
-  from PhantomViewerGui5 import Ui_PhantomViewerGui    #main window Gui
+from PhantomViewerGui5 import Ui_PhantomViewerGui    #main window Gui
 import ROIProperties, ROIInfo, PhantomProperties
 import T1IRabs, T1VFA, T1VTR, T2SE, DifModel, LCPowerLawFit # models for data fitting
-import T1IRmap,  T2SEmap, DifMap     #modules to make parameter maps
+import T1IRmap,  T1VFAmap, T2SEmap, DifMap     #modules to make parameter maps
 import Resolution, Fiducial   #modules to perform automated resolution and geometric distortion measurements
-import Info
+#import Info
 import FitPlots   #Plot window to compare data to fits
 import ImageList  #class to make an image list from a stack of image files
 import DICOMDIRlist
 import VPhantom, SystemPhantom, DiffusionPhantom,NISThcpPhantom, NISTKTPhantom, NISThcpCoronalPhantom
+import CustomColorMaps
+from TNMRviewer import TNMRviewer #Class to display NMR/MRI data from techmag data sets (4d complex raw data files), NIST internal data
 
 class PhantomViewer(QMainWindow):
-  """Main ROI viewing window, customized for different analysis eg geometric distortion, T1, T2, SNR etc"""
+  """Main viewing window, customized for different analysis eg geometric distortion, T1, T2, SNR etc, not scalable yet"""
   def __init__(self, dt,parent = None):
     super(PhantomViewer, self).__init__()
     pg.setConfigOption('background', 0.2)   #Background on plots 0 = black, 1 = white
     pg.setConfigOption('foreground', 'w')
-    self.setAttribute(Qt.WA_NativeWindow, True)
-    self.ui = Ui_PhantomViewerGui()
+    self.setAttribute(Qt.WA_NativeWindow, True)    #flag to make things look better in Windows
+    self.ui = Ui_PhantomViewerGui()   #Gui is generated from a ui file using pyuic5
     self.ui.setupUi(self)
-    self.modDate = '4/16/2020'
+    for at in self.ui.__dict__.keys():    #turns on menu tool tips
+      menuItem=getattr(self.ui,at)
+      if  isinstance(menuItem, QMenu):   #make sure the item is a menu
+        menuItem.setToolTipsVisible(True)
+    #print(QStyleFactory.keys())
+    self.modDate = modDate
     self.wTitle = "PhantomViewer "  + self.modDate + ': ' 
     self.setWindowTitle(self.wTitle)
     self.nImages=0
@@ -84,9 +101,6 @@ class PhantomViewer(QMainWindow):
     self.imswin=self.ims.win      #image stack window
     self.imv = self.ims.imv    #image stack pyqtgraph image view object
 
-    self.imv.ui.roiBtn.setText("Line scan/ROI")
-#    self.imv.ui.histogram.plot.setLogMode(None,True)    #Not working in pyqtgraph 0.11!!set the histogram y axis to a log scale  
-#    self.imv.ui.histogram.plot.setLogMode(None,True)    #set the histogram y axis to a log scale      
     self.imv.vLine = pg.InfiniteLine(angle=90, movable=False)   #cross hair
     self.imv.hLine = pg.InfiniteLine(angle=0, movable=False)
     self.imv.addItem(self.imv.vLine, ignoreBounds=True)
@@ -98,10 +112,27 @@ class PhantomViewer(QMainWindow):
     self.dicomHeader = "DICOM Header"
     self.ui.lblnImages.setText((str(self.nImages)))
     self.ui.lblCurrentImage.setText("none")
+    try:    #load graphics files
+      self.ui.lblT1IRequ.setPixmap(QPixmap("T1-IR1model.jpg"))
+      #self.ui.lblT1IRequ.update()
+      self.ui.lblT1VFAequ.setPixmap(QPixmap("../icons/T1-VFA.jpg"))
+      self.ui.lblT1VTRequ.setPixmap(QPixmap("../icons/T1VTR3.jpg"))
+      self.ui.lblT2SEequ.setPixmap(QPixmap("../icons/T2-1model.jpg"))
+    except:
+      raise
+      pass
     self.ds= ImageList.ImageList()                         #list of data sets, can be dicom, tiff, fdf
     self.stackList=[]       #list of image stacks, first element is the current image stack
     self.seriesFileNames = []
     self.image3D = np.array ([1,1]) 
+
+#Physical Constants
+    self.GammaPMHzperT=constants.physical_constants["proton gyromag. ratio over 2 pi"][0]   #in MHz/T 
+    self.GammaPHzperT=1E6*constants.physical_constants["proton gyromag. ratio over 2 pi"][0]   #in Hz/T 
+    self.GammaWaterProtonRadperT=constants.physical_constants["proton gyromag. ratio"][0]*(1-constants.physical_constants["proton mag. shielding correction"][0])                                                                                
+    self.Gamma=self.GammaWaterProtonRadperT
+    self.Gammaf=self.Gamma/2/np.pi
+        
 #signals and slots
 # Menu items
 #Images
@@ -138,7 +169,9 @@ class PhantomViewer(QMainWindow):
     self.ui.actionMedium.triggered.connect(self.ROIMedium) 
     self.ui.actionThick.triggered.connect(self.ROIThick) 
     self.ui.actionROI_Color.triggered.connect(self.ROIColor)
-    self.ui.actionLabel_Color.triggered.connect(self.labelColor)   
+    self.ui.actionLabel_Color.triggered.connect(self.labelColor) 
+    self.ui.actionUse_raw_voxels.triggered.connect(self.useRawVoxels)
+    self.ui.actionUse_affine_regridding.triggered.connect(self.useAffineRegridding)  
 #Analysis
     self.ui.actionT1_Analysis.triggered.connect(self.T1Analysis)
     self.ui.actionT2_Analysis.triggered.connect(self.T2Analysis)
@@ -159,12 +192,13 @@ class PhantomViewer(QMainWindow):
     self.ui.actionCrop_to_ROI.triggered.connect(self.cropToROI)
     self.ui.actionPlot_ROI_vs_Index.triggered.connect(self.plotROIvsIndex)
     self.ui.actionSetScaleSlopeto1_0.triggered.connect(self.setSlopeOffset)
+    self.ui.actionShow_Hide_Phantom_Reference_Values.triggered.connect(self.toggleShowReferenceValues)
 #Fit Options
     self.ui.actionMake_Map.triggered.connect(self.makeMap)
 #Tools
     self.ui.action3dViewer.triggered.connect(self.View3d)
     self.ui.action3dViewer.setToolTip('Creates 3d rendering of image stack')
-    self.ui.actionView3D_color.triggered.connect(self.view3DColor)
+    self.ui.actionView3D_color.triggered.connect(self.set3DColor)
     self.ui.actionView3D_transparency.triggered.connect(self.view3DTransparency)
     self.ui.actionView3D_invert_image.triggered.connect(self.view3Dinvert)
     self.ui.actionWrite_to_DICOM.triggered.connect(self.writeDicomFiles)
@@ -173,7 +207,11 @@ class PhantomViewer(QMainWindow):
     self.ui.actionClear_Report.triggered.connect(self.clearReport)
     self.ui.actionSaveDataFiles.triggered.connect(self.saveData)
     self.ui.txtResults.setHidden(False)
-
+#Raw data/Recon
+    self.ui.actionOpen_Image_Window.triggered.connect(self.openRawDataWindow)
+    self.ui.actionOpen_Image_Window.setToolTip('Image window to input and reconstruct raw techmag data')
+    self.ui.actionDownloadImageStack.triggered.connect(self.downloadImageStack)
+    self.ui.actionDownloadImageStack.setToolTip('IDowload image stack from raw data viewer')
 #  push buttons and sliders
     self.ui.hsROISet.valueChanged.connect(self.changeROISet)
     self.ui.vsImage.valueChanged.connect(self.imageSlider)
@@ -188,7 +226,9 @@ class PhantomViewer(QMainWindow):
     self.ui.pbViewFits.clicked.connect(self.viewFits)
 
     self.ui.pbSliceProfileSetup.clicked.connect(self.sliceProfileSetup) 
-    self.ui.pbSliceProfileAnalize.clicked.connect(self.sliceProfileAnalysis)    
+    self.ui.pbSliceProfileAnalize.clicked.connect(self.sliceProfileAnalysis)
+    
+    self.ui.pbCaclulateSNR.clicked.connect(self.calculateSNR)    
     
     self.ui.hsAngle.valueChanged.connect(self.rotateROIs) 
     self.ui.hsSize.valueChanged.connect(self.reSizeROIs)
@@ -208,6 +248,8 @@ class PhantomViewer(QMainWindow):
     self.TEChangedFlag = True   #flag to input new TE values
     self.ui.lblTR.textChanged.connect(self.TRChanged)
     self.TRChangedFlag = True   #flag to input new TR values
+    self.ui.lblTI.textChanged.connect(self.TIChanged)
+    self.TIChangedFlag = True   #flag to input new TR values
        
 #  setup regions of interest (ROIs)
     self.dataType = str(dt)    #string indicating data type "T1", "T2", "PD-SNR", "Dif" ;"SliceProfile" determines what fitting models are accessible
@@ -245,7 +287,9 @@ class PhantomViewer(QMainWindow):
     self.view3DBackground = QColor(155, 155 ,255 , alpha=10)
     self.view3DTransparency = 1.75   #set transparency scaling for 3dview, 1 = transparency set by voxel value
     self.view3Dinvert = False    #flag to invert contrast in 3d image
-
+    self.affineROIArray=True    #flag to determine if arrays associated with an ROI use an affine regridding or are raw voxels
+    self.mapBaseline=0.1        #baseline value (fraction of maximum signal) below which map data will not be fit. 
+    
 #global data structures
     self.rdy = np.array([0.,0.]) # 2d numpy array of raw data (usually signal averaged i= ROI j=image number in stack)
     self.resy = np.array([0.,0.]) # 2d numpy array of residuals data-fit (usually signal averaged i= ROI j=image number in stack)
@@ -255,8 +299,10 @@ class PhantomViewer(QMainWindow):
     self.background = 0.0    #background averaged over images
     self.ui.lblBackGround.setText(str(self.background))
     self.noisefactor= 1.0   #data below noisefactor*background will not be fit
-    self.fity=np.zeros((14,100)) # 2d numpy array of fitting model using optimized parameters
-    self.fitx = np.arange(100) # 100 element numpy array of imaging parameter spanning range of image data (independent variable)
+    self.varySEBaseline=False   #flag to have a variable baseline in T2, T2* fits or to set it to zero
+    self.nFitPoints=2000
+    self.fity=np.zeros((14,self.nFitPoints)) # 2d numpy array of fitting model using optimized parameters
+    self.fitx = np.arange(self.nFitPoints) # 100 element numpy array of imaging parameter spanning range of image data (independent variable)
     self.clickArray = []   # list of numpy array of points I, J, value generated from mouse clicks on the images
     self.clickArraymm = []   # Same as clickArray except in mm x,y, value 
     self.T1Params = []  #list of lmfit dictionaries
@@ -268,11 +314,18 @@ class PhantomViewer(QMainWindow):
     self.reverseTEOrder = False    #flag to reverse TE order
     self.resultsPlotY = True        #flag to plot fit parameter in Results plot
     self.resultsPlotError = False        #flag to plot error relative to reference in Results plot
+    self.reportReferenceValues= False   #flag to indicate whether to report reference values from Phantom ROI description along with fitted values
     self.messageLogOn=False         #flag to log messages (msgPrint) into messageLog
     self.messageLog=''
-    self.msgPrint('Python='+ sys.version + '; pydicom=' + pydicom._version.__version__ + '; PyQt=' +PYQT_VERSION_STR +'\n')    #print Python version being used
+    self.msgPrint('Current working directory=' + os.getcwd() +'\n')
+    self.msgPrint('Packages in use\n')
+    self.msgPrint('***Python='+ sys.version + '; pydicom=' + pydicom._version.__version__  + '\n')    #print package versions being used
+    self.msgPrint('PyQt=' +PYQT_VERSION_STR + '; pyqtgraph=' +pg.__version__ + ', lmfit='+ lmfit.__version__+'***\n')    #print Python version being used
     self.bgXSpacing=14.0   #distance between center of ROI and location where background is measured"
     self.bgYSpacing=12.5
+    self.signalSaturation=4096  #value to check for signal saturation, typically 2^12
+    self.pythonPath=sys.path
+    #self.msgPrint('Python=' + str(self.pythonPath))
 
 #********************Setup phantom parameters************************************    
   def setupPhantom(self, phantom):
@@ -298,10 +351,17 @@ class PhantomViewer(QMainWindow):
     self.relativeOffseth = 0.0  #horizontal and vertical offsets of the ROI positions
     self.relativeOffsetv = 0.0
     self.redrawROIs()
-        
+    
+  def toggleShowReferenceValues(self):
+    self.showReferenceValues=not self.showReferenceValues
+    if self.showReferenceValues:
+      self.msgPrint('Show phantom reference values is True')
+    else:
+      self.msgPrint('Show phantom reference values is False')
 #**************** Standard Phantoms *******************
   def SystemPhantom (self):
     self.setupPhantom(SystemPhantom.SystemPhantom())
+    self.msgPrint('System Phantom: Calibrations ' + self.Phantom.phantomReferenceData +'\n')
    
   def DiffusionPhantom (self):
     self.setupPhantom(DiffusionPhantom.DiffusionPhantom())
@@ -402,10 +462,12 @@ class PhantomViewer(QMainWindow):
                                              
   def openFile (self):
     '''opens image file, set of highlighted files, or a DICOM directory'''
-    f = QFileDialog.getOpenFileNames(self,"Open Image Files  or DICOMDIR",self.imageDirectory )
+    f = QFileDialog.getOpenFileNames(self,"Open Image Files or DICOMDIR",self.imageDirectory )
     if not f:  #if cancel is pressed return
       return None     
     if type(f)==tuple:    #passes  string with PyQt4 and a tuple with PyQt5
+      if f[0]==[]:    #Return if cancelled
+        return None
       self.fileNames=f[0]
     else:
       self.fileNames=f
@@ -452,6 +514,8 @@ class PhantomViewer(QMainWindow):
     if not f:  #if cancel is pressed return
       return None     
     if type(f)==tuple:    #passes  string with PyQt4 and a tuple with PyQt5
+      if f[0]==[]:    #Return if cancelled
+        return None
       fileName=f[0]
     else:
       fileName=f
@@ -462,15 +526,20 @@ class PhantomViewer(QMainWindow):
     if not f:  #if cancel is pressed return
       return None     
     if type(f)==tuple:    #passes  string with PyQt4 and a tuple with PyQt5
+      if f[0]==[]:    #Return if cancelled
+        return None
       fileName=f[0]
     else:
       fileName=f
     self.ds.writeAnimatedGIF(fileName)   #write current image list to GIF
              
   def changeROISet (self):
-    self.InitialROIs =self.Phantom.ROIsets[self.ui.hsROISet.value()]
-    self.ui.lblROISet.setText(self.InitialROIs.ROIName)
-    self.resetROIs()
+    try:
+      self.InitialROIs =self.Phantom.ROIsets[self.ui.hsROISet.value()]
+      self.ui.lblROISet.setText(self.InitialROIs.ROIName)
+      self.resetROIs()
+    except:
+      self.msgPrint('Cannot change ROI set')
     
  # *******************Image Display Methods*****************************     
   def imageSlider (self):
@@ -479,78 +548,91 @@ class PhantomViewer(QMainWindow):
       
   def displayCurrentImage (self):
     '''Displays current image as set by self.nCurrentImage and associated header parameters'''
-    i=self.nCurrentImage
-    self.ui.lblCurrentImage.setText(str(self.nCurrentImage)) 
-    self.ui.lblDate.setText(format(self.ds.StudyDate[i])) 
-    self.ui.lblDataType.setText(format(self.ds.DataType[i])) 
-    self.ui.lblFileName.setText(self.ds.FileName[i]) 
-    self.ui.lblManufacturer.setText(self.ds.Manufacturer[i]) 
-    self.ui.lblSeries.setText(self.ds.SeriesDescription[i]) 
-    self.ui.lblInstitution.setText(self.ds.InstitutionName[i]) 
-    self.ui.lblField.setText(str(self.ds.MagneticFieldStrength[i]))
-    self.ui.lblReceiveCoil.setText(str(self.ds.ReceiveCoilName[i]))    
-    self.ui.lblPatient.setText(str(self.ds.PatientName[i])) 
-    self.ui.lblProtocol.setText(str(self.ds.ProtocolName[i])) 
-    self.ui.lblBW.setText(str(self.ds.PixelBandwidth[i])) 
-    self.TEvaries=not(self.checkEqual(self.ds.TE))
-    if self.TEvaries:
-      self.T2Analysis()
-    self.ui.lblTE.setStyleSheet("background-color: yellow") if self.TEvaries else self.ui.lblTE.setStyleSheet("background-color: white")  
-    self.ui.lblTE.setText(str(self.ds.TE[i]))
-    self.TRvaries = not(self.checkEqual(self.ds.TR))
-    if self.TRvaries:
-      self.ui.tabT1.setCurrentIndex(2)
-    self.ui.lblTR.setStyleSheet("background-color: yellow") if self.TRvaries else self.ui.lblTR.setStyleSheet("background-color: white")
-    self.ui.lblTR.setText(str(self.ds.TR[i])) 
-    self.ui.lblColumns.setText(str(self.ds.Columns[i]))  
-    self.ui.lblRows.setText(str(self.ds.Rows[i]))
-    self.TIvaries = not(self.checkEqual(self.ds.TI))
-    if self.TIvaries:
-      self.ui.tabT1.setCurrentIndex(0)
-    self.ui.lblTI.setStyleSheet("background-color: yellow") if self.TIvaries else self.ui.lblTI.setStyleSheet("background-color: white")    
-    self.ui.lblTI.setText(str(self.ds.TI[i])) 
-    self.ui.lblSliceThickness.setText("{:.2f}".format(self.ds.SliceThickness[i]))
-    self.sliceLocationVaries = not(self.checkEqual(self.ds.SliceLocation))
-    self.ui.lblSliceLocation.setStyleSheet("background-color: yellow") if self.sliceLocationVaries else self.ui.lblSliceLocation.setStyleSheet("background-color: white")
-    self.ui.lblSliceLocation.setText("{:.2f}".format(self.ds.SliceLocation[i])) 
-    self.ui.lblPixelSpacingRow.setText("{:.3f}".format(self.ds.PixelSpacingX[i])) 
-    self.ui.lblPixelSpacingCol.setText("{:.3f}".format(self.ds.PixelSpacingY[i]))
-    self.FAvaries =  not(self.checkEqual(self.ds.FA))
-    if self.FAvaries:
-      self.ui.tabT1.setCurrentIndex(1)
-    self.ui.lblFA.setStyleSheet("background-color: yellow") if self.FAvaries else self.ui.lblFA.setStyleSheet("background-color: white")    
-    self.ui.lblFA.setText(str(self.ds.FA[i]))
-    self.ui.lblPhaseEncodeDirection.setText(str(self.ds.InPlanePhaseEncodingDirection[i])) 
-    self.ui.lblFoVX.setText("{:.3f}".format(self.ds.FoVX[i]))
-    self.ui.lblFoVY.setText("{:.3f}".format(self.ds.FoVY[i]))    
-    self.ui.lblbValue.setText("{:.2f}".format(self.ds.bValue[i]))
-    self.bvaries=not(self.checkEqual(self.ds.bValue))
-    if self.bvaries:
-      self.diffusionAnalysis()
-      self.ui.lblbValue.setStyleSheet("background-color: yellow")
-    else:
-      self.ui.lblFA.setStyleSheet("background-color: white")    
-    data = self.ds.PA[i]  
-    xscale =self.ds.PixelSpacingX[i] if (self.ds.PixelSpacingX[i] > 0.) else 1
-    yscale = self.ds.PixelSpacingY[i] if (self.ds.PixelSpacingY[i] > 0.) else 1
-    xmin = -self.ds.FoVX[i]/2   #set origin to center of image, need to upgrade to set by DICOM tag
-    ymin = -self.ds.FoVY[i]/2    
-    self.ui.lblUpperLeft.setText("UL=" + "{:.1f}".format(self.ds.ImagePosition[i][0]) + "," + "{:.1f}".format(self.ds.ImagePosition[i][1]) + "," + "{:.1f}".format(self.ds.ImagePosition[i][2]))
-    self.imv.setImage(data,pos = (xmin,ymin), scale = (xscale,yscale),)
-    self.headerWindow.text.setText(self.ds.header[i])
-#    self.ui.lbldX.setText(str(self.ROItrans[0]))
-#    self.ui.lbldY.setText(str(self.ROItrans[1]))
-#    self.ui.lbldZ.setText(str(self.ROItrans[2]))
-    self.imv.getView().setLabel('bottom',self.DirectionLabel(self.ds.RowDirection[i]),"mm")
-    self.imv.getView().setLabel('left',self.DirectionLabel(self.ds.ColumnDirection[i]),"mm")
-    self.ui.lblScaleSlope.setText("{:.3e}".format(self.ds.ScaleSlope[i]))
-    self.ui.lblScaleIntercept.setText("{:.3e}".format(self.ds.ScaleIntercept[i]))
-    self.imv.activateWindow()
-  #    self.showROIInfo()  #update ROI display                             
-
+    try:
+      i=self.nCurrentImage
+      self.ui.lblCurrentImage.setText(str(self.nCurrentImage)) 
+      self.ui.lblDate.setText(format(self.ds.StudyDate[i])) 
+      self.ui.lblDataType.setText(format(self.ds.DataType[i])) 
+      self.ui.lblFileName.setText(self.ds.FileName[i]) 
+      self.ui.lblManufacturer.setText(self.ds.Manufacturer[i]) 
+      self.ui.lblSeries.setText(self.ds.SeriesDescription[i]) 
+      self.ui.lblInstitution.setText(self.ds.InstitutionName[i]) 
+      #self.ui.lblField.setText(str(self.ds.MagneticFieldStrength[i]))
+      self.ui.lblField.setText("{:.6f}".format(1E6*self.ds.ImagingFrequency[i]/self.Gammaf))
+      self.ui.lblReceiveCoil.setText(str(self.ds.ReceiveCoilName[i]))    
+      self.ui.lblPatient.setText(str(self.ds.PatientName[i])) 
+      self.ui.lblProtocol.setText(str(self.ds.ProtocolName[i])) 
+      self.ui.lblBW.setText(str(self.ds.PixelBandwidth[i])) 
+      self.TEvaries=not(self.checkEqual(self.ds.TE))
+      if self.TEvaries:
+        self.T2Analysis()
+      self.ui.lblTE.setStyleSheet("background-color: yellow") if self.TEvaries else self.ui.lblTE.setStyleSheet("background-color: white")  
+      self.ui.lblTE.setText(str(self.ds.TE[i]))
+      self.TRvaries = not(self.checkEqual(self.ds.TR))
+      if self.TRvaries:
+        self.ui.tabT1.setCurrentIndex(2)
+      self.ui.lblTR.setStyleSheet("background-color: yellow") if self.TRvaries else self.ui.lblTR.setStyleSheet("background-color: white")
+      self.ui.lblTR.setText(str(self.ds.TR[i])) 
+      self.ui.lblColumns.setText(str(self.ds.Columns[i]))  
+      self.ui.lblRows.setText(str(self.ds.Rows[i]))
+      self.TIvaries = not(self.checkEqual(self.ds.TI))
+      if self.TIvaries:
+        self.ui.tabT1.setCurrentIndex(0)
+      self.ui.lblTI.setStyleSheet("background-color: yellow") if self.TIvaries else self.ui.lblTI.setStyleSheet("background-color: white")    
+      self.ui.lblTI.setText(str(self.ds.TI[i]))
+      if self.ds.SliceThickness[i] != None:
+          self.ui.lblSliceThickness.setText("{:.2f}".format(self.ds.SliceThickness[i]))
+      self.sliceLocationVaries = not(self.checkEqual(self.ds.SliceLocation))
+      self.ui.lblSliceLocation.setStyleSheet("background-color: yellow") if self.sliceLocationVaries else self.ui.lblSliceLocation.setStyleSheet("background-color: white")
+      self.ui.lblSliceLocation.setText("{:.2f}".format(self.ds.SliceLocation[i])) 
+      self.ui.lblPixelSpacingRow.setText("{:.3f}".format(self.ds.PixelSpacingX[i])) 
+      self.ui.lblPixelSpacingCol.setText("{:.3f}".format(self.ds.PixelSpacingY[i]))
+      self.FAvaries =  not(self.checkEqual(self.ds.FA))
+      if self.FAvaries:
+        self.ui.tabT1.setCurrentIndex(1)
+      self.ui.lblFA.setStyleSheet("background-color: yellow") if self.FAvaries else self.ui.lblFA.setStyleSheet("background-color: white")    
+      self.ui.lblFA.setText(str(self.ds.FA[i]))
+      self.ui.lblPhaseEncodeDirection.setText(str(self.ds.InPlanePhaseEncodingDirection[i])) 
+      self.ui.lblFoVX.setText("{:.3f}".format(self.ds.FoVX[i]))
+      self.ui.lblFoVY.setText("{:.3f}".format(self.ds.FoVY[i]))    
+      self.ui.lblbValue.setText("{:.2f}".format(self.ds.bValue[i]))
+      self.bvaries=not(self.checkEqual(self.ds.bValue))
+      if self.bvaries:
+        self.diffusionAnalysis()
+        self.ui.lblbValue.setStyleSheet("background-color: yellow")
+      else:
+        self.ui.lblbValue.setStyleSheet("background-color: white")    
+      data = self.ds.PA[i]  
+      xscale =self.ds.PixelSpacingX[i] if (self.ds.PixelSpacingX[i] > 0.) else 1
+      yscale = self.ds.PixelSpacingY[i] if (self.ds.PixelSpacingY[i] > 0.) else 1
+      xmin = -self.ds.FoVX[i]/2   #set origin to center of image, need to upgrade to set by DICOM tag
+      ymin = -self.ds.FoVY[i]/2    
+      self.ui.lblUpperLeft.setText("UL=" + "{:.1f}".format(self.ds.ImagePosition[i][0]) + "," + "{:.1f}".format(self.ds.ImagePosition[i][1]) + "," + "{:.1f}".format(self.ds.ImagePosition[i][2]))
+      self.imv.setImage(data,pos = (xmin,ymin), scale = (xscale,yscale))
+      self.headerWindow.text.setText(self.ds.header[i])
+  #    self.ui.lbldX.setText(str(self.ROItrans[0]))
+  #    self.ui.lbldY.setText(str(self.ROItrans[1]))
+  #    self.ui.lbldZ.setText(str(self.ROItrans[2]))
+      self.imv.getView().setLabel('bottom',self.DirectionLabel(self.ds.RowDirection[i]),"mm")
+      self.imv.getView().setLabel('left',self.DirectionLabel(self.ds.ColumnDirection[i]),"mm")
+      self.ui.lblScaleSlope.setText("{:.3e}".format(self.ds.ScaleSlope[i]))
+      self.ui.lblScaleIntercept.setText("{:.3e}".format(self.ds.ScaleIntercept[i]))
+      self.imv.activateWindow()
+    #    self.showROIInfo()  #update ROI display                             
+    except:
+      raise
+      self.msgPrint('Cannot display current image')
 #******************End Image Methods************************************************
 
 #******************ROI Methods******************************************************         
+  def useRawVoxels(self):
+    self.affineROIArray=False
+    self.msgPrint('Using raw voxel values in ROI array calculations \n')
+    
+  def useAffineRegridding(self):
+     self.affineROIArray=True
+     self.msgPrint('Using affine regridding in ROI array calculations \n')
+  
   def toggleShowROIs(self):
       self.bShowROIs =not self.bShowROIs
       self.showROIs()
@@ -703,35 +785,53 @@ class PhantomViewer(QMainWindow):
         self.redrawROIs() 
         
   def reflectX(self):
-    for roi in self.currentROIs.ROIs:
-      roi.Xcenter=-roi.Xcenter
-    self.redrawROIs()
+    try:
+      for roi in self.currentROIs.ROIs:
+        roi.Xcenter=-roi.Xcenter
+      self.redrawROIs()
+    except:
+      self.msgPrint('Cannot rotate ROIs')
     
   def reflectY(self):
-    for roi in self.currentROIs.ROIs:
-      roi.Ycenter=-roi.Ycenter
-    self.redrawROIs()
-
+    try:
+      for roi in self.currentROIs.ROIs:
+        roi.Ycenter=-roi.Ycenter
+      self.redrawROIs()
+    except:
+      self.msgPrint('Cannot rotate ROIs')
+      
   def reflectZ(self):
-    for roi in self.currentROIs.ROIs:
-      roi.Zcenter=-roi.Zcenter
-    self.redrawROIs() 
+    try:
+      for roi in self.currentROIs.ROIs:
+        roi.Zcenter=-roi.Zcenter
+      self.redrawROIs()
+    except:
+      self.msgPrint('Cannot rotate ROIs')     
 
   def rotate90X(self):
-    for roi in self.currentROIs.ROIs:
-      roi.Xcenter,roi.Ycenter,roi.Zcenter=roi.Xcenter,-roi.Zcenter,roi.Ycenter
-    self.redrawROIs()
-    
+    try:
+      for roi in self.currentROIs.ROIs:
+        roi.Xcenter,roi.Ycenter,roi.Zcenter=roi.Xcenter,-roi.Zcenter,roi.Ycenter
+      self.redrawROIs()
+    except:
+      self.msgPrint('Cannot rotate ROIs')
+          
   def rotate90Y(self):
-    for roi in self.currentROIs.ROIs:
-      roi.Ycenter=-roi.Ycenter
-    self.redrawROIs()
-
+    try:
+      for roi in self.currentROIs.ROIs:
+        roi.Ycenter=-roi.Ycenter
+      self.redrawROIs()
+    except:
+      self.msgPrint('Cannot rotate ROIs')
+      
   def rotate90Z(self):
-    for roi in self.currentROIs.ROIs:
-      roi.Xcenter,roi.Ycenter,roi.Zcenter=roi.Ycenter,-roi.Xcenter,roi.Zcenter
-    self.redrawROIs() 
-    
+    try:
+      for roi in self.currentROIs.ROIs:
+        roi.Xcenter,roi.Ycenter,roi.Zcenter=roi.Ycenter,-roi.Xcenter,roi.Zcenter
+      self.redrawROIs() 
+    except:
+      self.msgPrint('Cannot rotate ROIs')
+          
   def translateROIs(self,tvector,snap, roiindex):
         self.relativeOffseth += tvector[0]
         self.relativeOffsetv += tvector[1]
@@ -750,24 +850,27 @@ class PhantomViewer(QMainWindow):
           self.currentROIs.ROIs[roiindex-1].translate(r)
                 
   def rotateROIs(self):
-    if hasattr(self,"currentROIs"):
-      t=float(self.ui.hsAngle.value())/10 #rotation angle in degrees
-      self.ui.lblPhantomAngle.setText("{:.1f}".format(t))
-      thetanew=float(t * np.pi / 180.)
-      dtheta=thetanew-self.theta
-      perpAxis=np.cross(self.ds.RowDirection[self.nCurrentImage], self.ds.ColumnDirection[self.nCurrentImage])
-      self.theta=thetanew
-      self.currentROIs.rotate(perpAxis, dtheta)
-      for i, roi in enumerate(self.pgROIs):   #change position of ROIs in pyqtgraph imageview object
-            r=np.array([self.currentROIs.ROIs[i].Xcenter,self.currentROIs.ROIs[i].Ycenter,self.currentROIs.ROIs[i].Zcenter])
-            (h,v) = self.GlobaltoRel(r,self.nCurrentImage)
-            if self.currentROIs.ROIs[i].Type=="Sphere":
-              roi.setPos((h-self.currentROIs.ROIs[i].d1/2,v-self.currentROIs.ROIs[i].d1/2))
-              roi.label.setPos(h-self.currentROIs.ROIs[i].d1/2,v-self.currentROIs.ROIs[i].d1/2)
-            if self.currentROIs.ROIs[i].Type=="Rectangle": 
-              roi.setPos((h-self.currentROIs.ROIs[i].dx/2,v-self.currentROIs.ROIs[i].dy/2))
-              roi.setAngle(self.currentROIs.ROIs[i].theta)
-            
+    try:
+      if hasattr(self,"currentROIs"):
+        t=float(self.ui.hsAngle.value())/10 #rotation angle in degrees
+        self.ui.lblPhantomAngle.setText("{:.1f}".format(t))
+        thetanew=float(t * np.pi / 180.)
+        dtheta=thetanew-self.theta
+        perpAxis=np.cross(self.ds.RowDirection[self.nCurrentImage], self.ds.ColumnDirection[self.nCurrentImage])
+        self.theta=thetanew
+        self.currentROIs.rotate(perpAxis, dtheta)
+        for i, roi in enumerate(self.pgROIs):   #change position of ROIs in pyqtgraph imageview object
+              r=np.array([self.currentROIs.ROIs[i].Xcenter,self.currentROIs.ROIs[i].Ycenter,self.currentROIs.ROIs[i].Zcenter])
+              (h,v) = self.GlobaltoRel(r,self.nCurrentImage)
+              if self.currentROIs.ROIs[i].Type=="Sphere":
+                roi.setPos((h-self.currentROIs.ROIs[i].d1/2,v-self.currentROIs.ROIs[i].d1/2))
+                roi.label.setPos(h-self.currentROIs.ROIs[i].d1/2,v-self.currentROIs.ROIs[i].d1/2)
+              if self.currentROIs.ROIs[i].Type=="Rectangle": 
+                roi.setPos((h-self.currentROIs.ROIs[i].dx/2,v-self.currentROIs.ROIs[i].dy/2))
+                roi.setAngle(self.currentROIs.ROIs[i].theta)
+    except:
+      self.msgPrint('Cannot rotate ROIs') 
+             
   def deleteROI(self,roi):
     if roi.Index >> 0:
       del self.currentROIs.ROIs[roi.Index-1]
@@ -816,6 +919,8 @@ class PhantomViewer(QMainWindow):
       if not f:  #if cancel is pressed return
         return None     
       if type(f)==tuple:    #passes  string with PyQt4 and a tuple with PyQt5
+        if f[0]==[]:    #Return if cancelled
+          return None
         fileName=f[0]
       else:
         fileName=f
@@ -831,6 +936,8 @@ class PhantomViewer(QMainWindow):
       if not f:  #if cancel is pressed return
         return None     
       if type(f)==tuple:    #passes  string with PyQt4 and a tuple with PyQt5
+        if f[0]==[]:    #Return if cancelled
+          return None
         self.phantomFileName=f[0]
       else:
         self.phantomFileName=f
@@ -929,6 +1036,27 @@ class PhantomViewer(QMainWindow):
       for i in range(1,len(self.ds.PA)):
         self.ds.PA[i]=np.flip(self.ds.PA[i], axis=1)
       self.displayCurrentImage()
+
+  def ROIarray(self,i,j):
+      '''returns masked rectangular array for circular roi i in image j, not masked or regridded'''
+      j+=1    #image 0 is a dummy image and image stack is indexed form 1 not 0, so add 1
+      try:
+          roi =self.pgROIs[i]
+          x=roi.pos()[0]    #find roi lower left
+          y=roi.pos()[1]
+          xul = int((x+self.ds.FoVX[j]/2)/self.ds.PixelSpacingX[j]) 
+          yul = int((y+self.ds.FoVY[j]/2)/self.ds.PixelSpacingY[j]) 
+          xlr = int((x+roi.size()[0]+self.ds.FoVX[j]/2)/self.ds.PixelSpacingX[j]) 
+          ylr = int((y+roi.size()[1]+self.ds.FoVY[j]/2)/self.ds.PixelSpacingY[j])
+          arr=self.ds.PA[xul:yul,xlr:ylr]
+          w=arr.shape[0]
+          h=arr.shape[0]
+          ## generate an ellipsoidal mask
+          mask = np.fromfunction(lambda x,y: (((x+0.5)/(w/2.)-1)**2+ ((y+0.5)/(h/2.)-1)**2)**0.5 > 1, (w, h))
+          maskedArr = ma.masked_array(arr, mask) 
+          return maskedArr
+      except:
+          return 0.0
                       
   def setbgROI(self,i,j):
       '''Finds average background around ROI i for image j'''
@@ -940,8 +1068,12 @@ class PhantomViewer(QMainWindow):
           y=roi.pos()[1]+roi.size()[1]/2
           Xindex = int((x+self.ds.FoVX[j]/2)/self.ds.PixelSpacingX[j]) #if self.ds.PixelSpacingX[self.nCurrentImage] > 0. else Xindex = int(mousePoint.x())
           Yindex = int((y+self.ds.FoVY[j]/2)/self.ds.PixelSpacingY[j]) #if self.ds.PixelSpacingY[self.nCurrentImage] > 0. else Yindex = int(mousePoint.y())
-          value=  self.ds.PA[j][Xindex,Yindex] 
-          bg=(self.ds.PA[j][Xindex+dx,Yindex] +self.ds.PA[j][Xindex-dx,Yindex]+self.ds.PA[j][Xindex,Yindex+dy]+self.ds.PA[j][Xindex,Yindex-dy])/4
+          value=  self.ds.PA[j][Xindex,Yindex]
+          bgx= self.ds.PA[j][Xindex+dx,Yindex]
+          bgmx=self.ds.PA[j][Xindex-dx,Yindex]
+          bgy=self.ds.PA[j][Xindex,Yindex+dy]
+          bgmy=self.ds.PA[j][Xindex,Yindex-dy]
+          bg=(bgx+bgmx)/2 #*** needs work****
           return bg
       except:
           return 0.0
@@ -1126,7 +1258,7 @@ class PhantomViewer(QMainWindow):
     self.operateOnAll=self.ui.cbOperateOnAllImages.isChecked()  
     if not self.operateOnAll:    #crop single image or len(self.ds.PA) < 2
         r=self.imv.roi
-        arr = r.getArrayRegion(self.imv.image, self.imv.getImageItem())
+        arr = r.getArrayRegion(self.imv.image, self.imv.getImageItem(),affine=self.affineROIArray)
         self.ds.PA[self.nCurrentImage] = arr
         self.ds.FoVX[self.nCurrentImage]=arr.shape[0]*self.ds.PixelSpacingX[self.nCurrentImage]
         self.ds.FoVY[self.nCurrentImage]=arr.shape[1]*self.ds.PixelSpacingY[self.nCurrentImage]
@@ -1137,7 +1269,7 @@ class PhantomViewer(QMainWindow):
         r=self.imv.roi
         for i,pa in enumerate(self.ds.PA):
           if i>0:   #skip dummy image at image 0
-            arr = r.getArrayRegion(pa, self.imv.getImageItem())
+            arr = r.getArrayRegion(pa, self.imv.getImageItem(),affine=self.affineROIArray)
             self.ds.PA[i] = arr
             self.ds.FoVX[i]=arr.shape[0]*self.ds.PixelSpacingX[i]
             self.ds.FoVY[i]=arr.shape[1]*self.ds.PixelSpacingY[i]
@@ -1172,30 +1304,59 @@ class PhantomViewer(QMainWindow):
     self.msgPrint('Changed current image stack to ' + newdataset + '\n')
     self.ims.win.setWindowTitle(newdataset)
     self.displayCurrentImage()
-       
+    
+  def addImagetoStack(self,pa):
+    '''adds image to stage with stack metadata'''
+    self.ds.addImage(pa)
+    self.nImages += 1
+    self.ui.lblnImages.setText(str(self.nImages))
+    self.ui.vsImage.setMinimum(1)       #set slider to go from 1 to the number of images
+    self.ui.vsImage.setMaximum(self.nImages)
+    self.nCurrentImage = self.nImages
+    self.ui.vsImage.setValue(self.nCurrentImage)
+    self.displayCurrentImage() 
+          
   def mouseClicked(self, evt):
     '''Adds points to point array used for analysis and background subtraction, adds or subtracts ROI'''
     try:
-      pos = evt[0]  ## using signal proxy turns original arguments into a tuple
-      mousePoint = self.imv.view.vb.mapSceneToView(pos.scenePos())
+      mouseEvent = evt[0]  ## using signal proxy turns original arguments into a tuple
+      button=mouseEvent.button()
+      pos=mouseEvent.pos()
+      scenePos=mouseEvent.scenePos()
+      mousePoint = self.imv.view.vb.mapSceneToView(mouseEvent.scenePos())
       if abs(mousePoint.x()) < self.ds.FoVX[self.nCurrentImage]/2 and abs(mousePoint.y()) < self.ds.FoVY[self.nCurrentImage]/2:
-        Xindex = int((mousePoint.x()+self.ds.FoVX[self.nCurrentImage]/2)/self.ds.PixelSpacingX[self.nCurrentImage]) #if self.ds.PixelSpacingX[self.nCurrentImage] > 0. else Xindex = int(mousePoint.x())
-        Yindex = int((mousePoint.y()+self.ds.FoVY[self.nCurrentImage]/2)/self.ds.PixelSpacingY[self.nCurrentImage]) #if self.ds.PixelSpacingY[self.nCurrentImage] > 0. else Yindex = int(mousePoint.y())
-        value=  self.ds.PA[self.nCurrentImage][Xindex,Yindex]      
-        self.msgPrint ( "Add point: " +  "I= " + str(Xindex) + ", J=" + str(Yindex) + ", value=" + str(value) + ", x(mm)= " + "{:.2f}".format(mousePoint.x()) + ", y(mm)=" + "{:.2f}".format(mousePoint.y()) + "\n")
-        pnt= np.array([float(Xindex),float(Yindex),float(value)])
-        self.clickArray.append(pnt)
-        pnt= np.array([mousePoint.x(),mousePoint.y(),float(value)])
-        self.clickArraymm.append(pnt)
-        dx=self.clickArraymm[-1][0]-self.clickArraymm[-2][0]
-        dy=self.clickArraymm[-1][1]-self.clickArraymm[-2][1]
-        self.msgPrint ( "dx(mm)= " +  "{:.2f}".format(dx) + ", dy(mm)= " +  "{:.2f}".format(dy)+ ", dr(mm)= " +  "{:.2f}".format((dx**2+dy**2)**0.5) + '\n')
-        if self.ui.rbDeleteROI.isChecked():
-          self.deleteROI(self.currentROI)
-        if self.ui.rbAddROI.isChecked():
-          self.addROI(mousePoint)
+            Xindex = int((mousePoint.x()+self.ds.FoVX[self.nCurrentImage]/2)/self.ds.PixelSpacingX[self.nCurrentImage]) #if self.ds.PixelSpacingX[self.nCurrentImage] > 0. else Xindex = int(mousePoint.x())
+            Yindex = int((mousePoint.y()+self.ds.FoVY[self.nCurrentImage]/2)/self.ds.PixelSpacingY[self.nCurrentImage]) #if self.ds.PixelSpacingY[self.nCurrentImage] > 0. else Yindex = int(mousePoint.y())
+            value=  self.ds.PA[self.nCurrentImage][Xindex,Yindex]      
+
+            pnt= np.array([float(Xindex),float(Yindex),float(value)])
+            self.clickArray.append(pnt)
+            pnt= np.array([mousePoint.x(),mousePoint.y(),float(value)])
+            self.clickArraymm.append(pnt)
+            dx=self.clickArraymm[-1][0]-self.clickArraymm[-2][0]
+            dy=self.clickArraymm[-1][1]-self.clickArraymm[-2][1]
+            message1= "Point:({},{}), value={:.2f}, x(mm)={:.2f}, y(mm)={:.2f}".format(Xindex,Yindex,value,mousePoint.x(),mousePoint.y())
+            message2=( "; dx(mm)={:.2f}, dy(mm)={:.2f}, dr(mm)={:.2f}".format(dx, dy, (dx**2+dy**2)**0.5))
+            self.ims.win.statusBar.showMessage(message1+message2)
+            if self.ui.rbDeleteROI.isChecked():
+              self.deleteROI(self.currentROI)
+            if self.ui.rbAddROI.isChecked():
+              self.addROI(mousePoint)
+      # if button==4 and mouseEvent.double():     #doulble click event
+      #   if self.imv.view.sceneBoundingRect().contains(pos):
+      #       mousePoint = self.imv.view.vb.mapToView(pos)
+      #       self.Xindex=mousePoint.x() 
+      #       self.Yindex=mousePoint.y()
+      #       self.imv.view.removeItem(self.imv.measureLine)
+      #       if self.Xindex>=0 and self.Yindex>=0:
+      #           self.imv.measureLine = pg.LineROI(self.lineIntPoint, (self.Xindex,self.Yindex), .1, pen=self.p4) 
+      #           self.imv.view.addItem(self.imv.measureLine)
+      #           self.imv.measureLineLength=np.sqrt((self.Xindex-self.lineIntPoint[0])**2+(self.Yindex-self.lineIntPoint[1])**2)
+      #           self.lineIntPoint=(self.Xindex,  self.Yindex)
+
     except:
       pass
+
 
   def viewDicomHeader (self):        
     if self.ui.rbViewDicomHeader.isChecked():
@@ -1208,7 +1369,7 @@ class PhantomViewer(QMainWindow):
       self.headerWindow.win.hide()
       
 
-  def view3DColor(self):  
+  def set3DColor(self):  
     self.view3DColor = QColorDialog.getColor()
     self.View3d()
     
@@ -1261,24 +1422,29 @@ class PhantomViewer(QMainWindow):
   def mouseMoved(self,evt): 
     '''mouse move event to move crosshairs and display location and values'''
     pos = evt[0]  ## using signal proxy turns original arguments into a tuple
-    if self.imv.view.sceneBoundingRect().contains(pos):
-        mousePoint = self.imv.view.vb.mapSceneToView(pos)
-        self.ui.lblH.setText("{:.2f}".format(mousePoint.x()))
-        self.ui.lblV.setText("{:.2f}".format(mousePoint.y()))
-        if abs(mousePoint.x()) < self.ds.FoVX[self.nCurrentImage]/2 and abs(mousePoint.y()) < self.ds.FoVY[self.nCurrentImage]/2:
-          Xindex = int((mousePoint.x()+self.ds.FoVX[self.nCurrentImage]/2)/self.ds.PixelSpacingX[self.nCurrentImage]) #if self.ds.PixelSpacingX[self.nCurrentImage] > 0. else Xindex = int(mousePoint.x())
-          Yindex = int((mousePoint.y()+self.ds.FoVY[self.nCurrentImage]/2)/self.ds.PixelSpacingY[self.nCurrentImage]) #if self.ds.PixelSpacingY[self.nCurrentImage] > 0. else Yindex = int(mousePoint.y())
-          value=  self.ds.PA[self.nCurrentImage][Xindex,Yindex]
-          try:      
-            self.ui.lblValue.setText("{:.2f}".format(value))
-          except:
-            pass
-          rc= self.reltoGlobal(mousePoint.x(), mousePoint.y(), self.nCurrentImage)
-          self.ui.lblX.setText("{:.2f}".format(rc[0]))
-          self.ui.lblY.setText("{:.2f}".format(rc[1]))
-          self.ui.lblZ.setText("{:.2f}".format(rc[2]))
-        self.imv.vLine.setPos(mousePoint.x())
-        self.imv.hLine.setPos(mousePoint.y()) 
+    try:
+        if self.imv.view.sceneBoundingRect().contains(pos):
+            mousePoint = self.imv.view.vb.mapSceneToView(pos)
+            self.ui.lblH.setText("{:.2f}".format(mousePoint.x()))
+            self.ui.lblV.setText("{:.2f}".format(mousePoint.y()))
+            if abs(mousePoint.x()) < self.ds.FoVX[self.nCurrentImage]/2 and abs(mousePoint.y()) < self.ds.FoVY[self.nCurrentImage]/2:
+              Xindex = int((mousePoint.x()+self.ds.FoVX[self.nCurrentImage]/2)/self.ds.PixelSpacingX[self.nCurrentImage]) #if self.ds.PixelSpacingX[self.nCurrentImage] > 0. else Xindex = int(mousePoint.x())
+              Yindex = int((mousePoint.y()+self.ds.FoVY[self.nCurrentImage]/2)/self.ds.PixelSpacingY[self.nCurrentImage]) #if self.ds.PixelSpacingY[self.nCurrentImage] > 0. else Yindex = int(mousePoint.y())
+              value=  self.ds.PA[self.nCurrentImage][Xindex,Yindex]
+              try:      
+                self.ui.lblValue.setText("{}".format(value))
+                self.ui.lblColI.setText("{}".format(Xindex))
+                self.ui.lblRowJ.setText("{}".format(Yindex))
+              except:
+                pass
+              rc= self.reltoGlobal(mousePoint.x(), mousePoint.y(), self.nCurrentImage)
+              self.ui.lblX.setText("{:.2f}".format(rc[0]))
+              self.ui.lblY.setText("{:.2f}".format(rc[1]))
+              self.ui.lblZ.setText("{:.2f}".format(rc[2]))
+            self.imv.vLine.setPos(mousePoint.x())
+            self.imv.hLine.setPos(mousePoint.y())
+    except:
+        pass 
 
   def reltoGlobal (self, h,v,n):   #given relative coordinate h,v of image n returns np vector of global coordinates 
     #rc= ((h+self.ds.FoVX[n]/2) * self.ds.RowDirection[n]+(v+self.ds.FoVX[n]/2)*self.ds.ColumnDirection[n])+self.ds.ImagePosition[n]
@@ -1310,169 +1476,173 @@ class PhantomViewer(QMainWindow):
 #******************************Data Extraction**************************************    
   def showRawData(self):
     '''Plots ROI signal vs relevant parameter; outputs data in self.rdx and self.rdy'''
-    self.ui.txtResults.clear()
-    self.msgPrint (self.imageDirectory + "\n")
-    self.msgPrint ('Study date =' + self.ds.StudyDate[self.nCurrentImage])  
-    self.msgPrint (', Manufacturer =' + self.ds.Manufacturer[self.nCurrentImage]) 
-    self.msgPrint (', Series =' +self.ds.SeriesDescription[self.nCurrentImage]) 
-    self.msgPrint (', Institution =' +self.ds.InstitutionName[self.nCurrentImage]) 
-    self.msgPrint (', B0(T) =' +str(self.ds.MagneticFieldStrength[self.nCurrentImage]))
-    self.msgPrint (', Receive Coil =' +str(self.ds.ReceiveCoilName[self.nCurrentImage]))    
-    self.msgPrint (', Protocol =' +str(self.ds.ProtocolName[self.nCurrentImage])) 
-    self.msgPrint (', Pixel Bandwidth =' +str(self.ds.PixelBandwidth[self.nCurrentImage])+'\n') 
-    self.msgPrint ("Data Type = " + self.dataType) 
-    self.msgPrint (", Raw data: " + time.strftime("%c") + os.linesep)
-    self.rdPlot.clear()
-    self.bAllSlices=self.ui.rbAllSlices.isChecked()
-    if self.bAllSlices == True:   #analyze all slices together
-      self.reducedImageSet= range(1,len(self.ds.PA))
-      self.msgPrint ("Slice locations(mm)=" + str(self.ds.SliceLocation[1:]) + "\n")
-    else:   # only analyze images which are at the current slice location
-      currentSL = self.ds.SliceLocation[self.nCurrentImage]   
-      self.reducedImageSet= [i for i, val in enumerate(self.ds.SliceLocation) if np.isclose(val, currentSL , rtol=1e-04, atol=1e-03)] #[0]] something changed, not returning an array now
-      self.msgPrint ("Slice location(mm)=" + "{:6.1f}".format(self.ds.SliceLocation[self.nCurrentImage]) + "\n")   
-    rd = np.zeros((len(self.pgROIs),len(self.reducedImageSet)))     #array containing raw data average signal in each ROI for each image
-    std = np.zeros((len(self.pgROIs),len(self.reducedImageSet)))    #array containing raw data standard deviation of signal in each ROI for each image
-    bgROI = np.zeros((len(self.pgROIs),len(self.reducedImageSet)))    #array containing background signal around each ROI for each signal
-# Set independent variable (parameter that is being varied ie TI, TE, TR, b, T etc
-# T1 data
-    if self.dataType == "T1":
-      if self.ui.tabT1.currentIndex() == 0: #T1 Inversion Recovery
-        self.rdPlot.setLogMode(x=False,y=True)
-        self.rdPlot.setLabel('bottom', "TI(ms)")
-        self.rdx = np.array([self.ds.TI[i] for i in self.reducedImageSet])
-        self.msgPrint ( "TI(ms)=")
-        for ti in self.rdx: 
-          self.msgPrint ( "{:12.1f}".format(ti))
-      if self.ui.tabT1.currentIndex() == 1: #T1 VFA
-        self.rdPlot.setLogMode(x=False,y=False)
-        self.rdPlot.setLabel('bottom', "FA(deg)")
-        self.rdx = np.array([self.ds.FA[j] for j in self.reducedImageSet])
-        self.msgPrint ( "FA(deg)=")
-        for fa in self.rdx: 
-          self.msgPrint ( "{:12.1f}".format(fa))
-      if self.ui.tabT1.currentIndex() == 2: #T1 VTR
-        self.rdPlot.setLogMode(x=False,y=False)
-        self.rdPlot.setLabel('bottom', "TR(ms)")
-        self.rdx = np.array([self.ds.TR[j] for j in self.reducedImageSet])
-        self.msgPrint ( "TR(ms)=")
-        for tr in self.rdx: 
-          self.msgPrint ( "{:12.1f}".format(tr))     
-      self.msgPrint (os.linesep)
-#T2 Data
-    if self.dataType == "T2":
-      self.rdPlot.setLogMode(x=False,y=True)
-      self.rdPlot.setLabel('bottom', "TE(ms)")
-      self.rdx = np.array([self.ds.TE[i] for i in self.reducedImageSet])
-      self.msgPrint ( "TE(ms)=")
-      for te in self.rdx: 
-        self.msgPrint ( "{:12.1f}".format(te))
-      self.msgPrint (os.linesep)
-#General Data
-    if self.dataType == "":
-      self.rdPlot.setLogMode(x=False,y=False)
-      self.rdPlot.setLabel('bottom', "index")
-      self.rdx = np.arange(1,len(self.reducedImageSet)+1)
-      self.msgPrint ( "index= ")
-      for index in self.rdx: 
-        self.msgPrint ( "{:12.1f}".format(index))
-      self.msgPrint (os.linesep)
-#Diffusion Data
-    if self.dataType == "Dif":
-      if self.ui.tabDif.currentIndex() == 0: #fit signal vs b-value
-        self.ADCmap = False
-        self.rdPlot.setLogMode(x=False,y=True)
-        self.rdPlot.setLabel('bottom', "b(s/mm^2)")
-        self.rdx = np.array([self.ds.bValue[i] for i in self.reducedImageSet])
-        self.msgPrint ( "b(s/mm^2)=")
-        for b in self.rdx: 
-          self.msgPrint ( "{:12.1f}".format(b))
+    try:
+      self.ui.txtResults.clear()
+      self.msgPrint (self.imageDirectory + "\n")
+      self.msgPrint ('Study date =' + self.ds.StudyDate[self.nCurrentImage])  
+      self.msgPrint (', Manufacturer =' + self.ds.Manufacturer[self.nCurrentImage]) 
+      self.msgPrint (', Series =' +self.ds.SeriesDescription[self.nCurrentImage]) 
+      self.msgPrint (', Institution =' +self.ds.InstitutionName[self.nCurrentImage]) 
+      self.msgPrint (', B0(T) =' +str(self.ds.MagneticFieldStrength[self.nCurrentImage]))
+      self.msgPrint (', Receive Coil =' +str(self.ds.ReceiveCoilName[self.nCurrentImage]))    
+      self.msgPrint (', Protocol =' +str(self.ds.ProtocolName[self.nCurrentImage])) 
+      self.msgPrint (', Pixel Bandwidth =' +str(self.ds.PixelBandwidth[self.nCurrentImage])+'\n') 
+      self.msgPrint ("Data Type = " + self.dataType) 
+      self.msgPrint (", Raw data: " + time.strftime("%c") + os.linesep)
+      self.rdPlot.clear()
+      self.bAllSlices=self.ui.rbAllSlices.isChecked()
+      if self.bAllSlices == True:   #analyze all slices together
+        self.reducedImageSet= range(1,len(self.ds.PA))
+        self.msgPrint ("Slice locations(mm)=" + str(self.ds.SliceLocation[1:]) + "\n")
+      else:   # only analyze images which are at the current slice location
+        currentSL = self.ds.SliceLocation[self.nCurrentImage]   
+        self.reducedImageSet= [i for i, val in enumerate(self.ds.SliceLocation) if np.isclose(val, currentSL , rtol=1e-04, atol=1e-03)] #[0]] something changed, not returning an array now
+        self.msgPrint ("Slice location(mm)=" + "{:6.1f}".format(self.ds.SliceLocation[self.nCurrentImage]) + "\n")   
+      rd = np.zeros((len(self.pgROIs),len(self.reducedImageSet)))     #array containing raw data average signal in each ROI for each image
+      std = np.zeros((len(self.pgROIs),len(self.reducedImageSet)))    #array containing raw data standard deviation of signal in each ROI for each image
+      self.ROIbgs = np.zeros((len(self.pgROIs),len(self.reducedImageSet)))    #array containing background signal around each ROI for each signal
+  # Set independent variable (parameter that is being varied ie TI, TE, TR, b, T etc
+  # T1 data
+      if self.dataType == "T1":
+        if self.ui.tabT1.currentIndex() == 0: #T1 Inversion Recovery
+          self.rdPlot.setLogMode(x=False,y=True)
+          self.rdPlot.setLabel('bottom', "TI(ms)")
+          self.rdx = np.array([self.ds.TI[i] for i in self.reducedImageSet])
+          self.msgPrint ( "TI(ms)=")
+          for ti in self.rdx: 
+            self.msgPrint ( "{:12.1f}".format(ti))
+        if self.ui.tabT1.currentIndex() == 1: #T1 VFA
+          self.rdPlot.setLogMode(x=False,y=False)
+          self.rdPlot.setLabel('bottom', "FA(deg)")
+          self.rdx = np.array([self.ds.FA[j] for j in self.reducedImageSet])
+          self.msgPrint ( "FA(deg)=")
+          for fa in self.rdx: 
+            self.msgPrint ( "{:12.1f}".format(fa))
+        if self.ui.tabT1.currentIndex() == 2: #T1 VTR
+          self.rdPlot.setLogMode(x=False,y=False)
+          self.rdPlot.setLabel('bottom', "TR(ms)")
+          self.rdx = np.array([self.ds.TR[j] for j in self.reducedImageSet])
+          self.msgPrint ( "TR(ms)=")
+          for tr in self.rdx: 
+            self.msgPrint ( "{:12.1f}".format(tr))     
         self.msgPrint (os.linesep)
-      if self.ui.tabDif.currentIndex() == 1: #ADC map
-        self.ADCmap = True
+  #T2 Data
+      if self.dataType == "T2":
+        self.rdPlot.setLogMode(x=False,y=True)
+        self.rdPlot.setLabel('bottom', "TE(ms)")
+        self.rdx = np.array([self.ds.TE[i] for i in self.reducedImageSet])
+        self.msgPrint ( "TE(ms)=")
+        for te in self.rdx: 
+          self.msgPrint ( "{:12.1f}".format(te))
+        self.msgPrint (os.linesep)
+  #General Data
+      if self.dataType == "":
         self.rdPlot.setLogMode(x=False,y=False)
-        self.rdPlot.setLabel('bottom', "ROI")
-        self.rdx = np.array([roi.Index for roi in self.currentROIs.ROIs])
-#PD Data
-    if self.dataType == "PD-SNR":
-      self.rdPlot.setLogMode(x=False,y=False)
-      self.rdx = np.array([roi.PD for roi in self.currentROIs.ROIs])
-      self.msgPrint ( "PD(%)=")
-      for pd in self.rdx: #note that the first image is a blank dummy
-        self.msgPrint ( "{:12.1f}".format(pd))
-      self.msgPrint (os.linesep)
-    self.dataHeader=self.ui.txtResults.toPlainText()
-#Thermometer Data
-    if self.dataType == "LCTherm":
-      self.rdPlot.setLogMode(x=False,y=False)
-      self.rdx = np.array([roi.Value for roi in self.currentROIs.ROIs])
-      self.msgPrint ( "LC Temperature Indicator (C)=")
-      for T in self.rdx: #note that the first image is a blank dummy
-        self.msgPrint ( "{:12.1f}".format(T))
-      self.msgPrint (os.linesep)
-    self.dataHeader=self.ui.txtResults.toPlainText()
-#Set and Plot raw signal data  
-    for i, roi in enumerate(self.pgROIs):
-      self.msgPrint ("ROI-" +"{:02d}".format(i+1) + '    ') 
-      for j, pa in enumerate([self.ds.PA[k] for k in self.reducedImageSet]):
-        array = roi.getArrayRegion(pa,self.imv.getImageItem())  #gets masked voxel array for ROI region   
-        rd[i ,j]= (array.mean()-self.ds.ScaleIntercept[self.reducedImageSet[j]])/self.ds.ScaleSlope[self.reducedImageSet[j]] #corrects for scaling in Phillips data
-        self.msgPrint ( "{:12.3f}".format(rd[i,j]) )
-        std[i ,j]=array.std()       #does not have Phillips scaling
-        bgROI[i,j]=self.setbgROI(i,j+1) #i=roi, j=image starts at 1 
-      c = self.rgb_to_hex(self.setPlotColor(i))
-      if self.dataType in ["T1" , "T2", "Dif", ''] and not self.ADCmap:
-        self.rdPlot.plot(self.rdx, rd[i,:],pen=self.setPlotColor(i),symbolBrush=self.setPlotColor(i), symbolPen='w', name=self.currentROIs.ROIs[i].Name)    
-        self.ui.txtRdLegend.insertHtml('<font size="5" color=' + c + '>' + u"\u25CF" + '</font>' + self.currentROIs.ROIs[i].Name + '<BR>'  )  #u"\u25CF"  + '<BR>' 
-      self.msgPrint (os.linesep)
-    self.msgPrint('Standard deviations \n')
-    for i, roi in enumerate(self.pgROIs):   #printing out standard deviations
-      self.msgPrint ("ROI-" +"{:02d}".format(i+1) + '    ') 
-      for j, pa in enumerate([self.ds.PA[k] for k in self.reducedImageSet]):
-        self.msgPrint ( "{:12.3f}".format(std[i,j]) )
-      self.msgPrint (os.linesep)
-    self.msgPrint('ROI background signal \n')
-    for i, roi in enumerate(self.pgROIs):   #printing out local background
-      self.msgPrint ("ROI-" +"{:02d}".format(i+1) + '    ') 
-      for j, pa in enumerate([self.ds.PA[k] for k in self.reducedImageSet]):
-        self.msgPrint ( "{:12.3f}".format(bgROI[i,j]) )
-      self.msgPrint (os.linesep)      
-    if self.dataType == "PD-SNR" or self.dataType == "LCTherm": #raw data is a 1d array signal vs ROI.PD
-      for k in range(len(self.reducedImageSet)):
-        self.rdPlot.plot(self.rdx, rd[:,k],pen=self.setPlotColor(k),symbolBrush=self.setPlotColor(0), symbolPen='w', name=self.currentROIs.ROIs[0].Name)
-    if self.dataType == "Dif" and self.ADCmap: #raw data is a 1d array signal vs ROI.Index
+        self.rdPlot.setLabel('bottom', "index")
+        self.rdx = np.arange(1,len(self.reducedImageSet)+1)
+        self.msgPrint ( "index= ")
+        for index in self.rdx: 
+          self.msgPrint ( "{:12.1f}".format(index))
+        self.msgPrint (os.linesep)
+  #Diffusion Data
+      if self.dataType == "Dif":
+        if self.ui.tabDif.currentIndex() == 0: #fit signal vs b-value
+          self.ADCmap = False
+          self.rdPlot.setLogMode(x=False,y=True)
+          self.rdPlot.setLabel('bottom', "b(s/mm^2)")
+          self.rdx = np.array([self.ds.bValue[i] for i in self.reducedImageSet])
+          self.msgPrint ( "b(s/mm^2)=")
+          for b in self.rdx: 
+            self.msgPrint ( "{:12.1f}".format(b))
+          self.msgPrint (os.linesep)
+        if self.ui.tabDif.currentIndex() == 1: #ADC map
+          self.ADCmap = True
+          self.rdPlot.setLogMode(x=False,y=False)
+          self.rdPlot.setLabel('bottom', "ROI")
+          self.rdx = np.array([roi.Index for roi in self.currentROIs.ROIs])
+  #PD Data
+      if self.dataType == "PD-SNR":
+        self.rdPlot.setLogMode(x=False,y=False)
+        self.rdx = np.array([roi.PD for roi in self.currentROIs.ROIs])
+        self.msgPrint ( "PD(%)=")
+        for pd in self.rdx: #note that the first image is a blank dummy
+          self.msgPrint ( "{:12.1f}".format(pd))
+        self.msgPrint (os.linesep)
+      self.dataHeader=self.ui.txtResults.toPlainText()
+  #Thermometer Data
+      if self.dataType == "LCTherm":
+        self.rdPlot.setLogMode(x=False,y=False)
+        self.rdx = np.array([roi.Value for roi in self.currentROIs.ROIs])
+        self.msgPrint ( "LC Temperature Indicator (C)=")
+        for T in self.rdx: #note that the first image is a blank dummy
+          self.msgPrint ( "{:12.1f}".format(T))
+        self.msgPrint (os.linesep)
+      self.dataHeader=self.ui.txtResults.toPlainText()
+  #Set and Plot roi signal data given by average value of signal within each roi  
+      for i, roi in enumerate(self.pgROIs):
+        self.msgPrint ("ROI-" +"{:02d}".format(i+1) + '    ') 
+        for j, pa in enumerate([self.ds.PA[k] for k in self.reducedImageSet]):
+          array = roi.getArrayRegion(pa,self.imv.getImageItem(),affine=self.affineROIArray)  #gets masked regridded voxel array for ROI region   
+          rd[i ,j]= (array.mean()-self.ds.ScaleIntercept[self.reducedImageSet[j]])/self.ds.ScaleSlope[self.reducedImageSet[j]] #corrects for scaling in Phillips data
+          self.msgPrint ( "{:12.3f}".format(rd[i,j]) )
+          std[i ,j]=array.std()       #does not have Phillips scaling
+          self.ROIbgs[i,j]=self.setbgROI(i,j+1) #i=roi, j=image starts at 1 
+        c = self.rgb_to_hex(self.setPlotColor(i))
+        if self.dataType in ["T1" , "T2", "Dif", ''] and not self.ADCmap:
+          self.rdPlot.plot(self.rdx, rd[i,:],pen=self.setPlotColor(i),symbolBrush=self.setPlotColor(i), symbolPen='w', name=self.currentROIs.ROIs[i].Name)    
+          self.ui.txtRdLegend.insertHtml('<font size="5" color=' + c + '>' + u"\u25CF" + '</font>' + self.currentROIs.ROIs[i].Name + '<BR>'  )  #u"\u25CF"  + '<BR>' 
+        self.msgPrint (os.linesep)
+      self.msgPrint('Standard deviations \n')
+      for i, roi in enumerate(self.pgROIs):   #printing out standard deviations
+        self.msgPrint ("ROI-" +"{:02d}".format(i+1) + '    ') 
+        for j, pa in enumerate([self.ds.PA[k] for k in self.reducedImageSet]):
+          self.msgPrint ( "{:12.3f}".format(std[i,j]) )
+        self.msgPrint (os.linesep)
+      self.msgPrint('ROI background signal \n')
+      for i, roi in enumerate(self.pgROIs):   #printing out local background
+        self.msgPrint ("ROI-" +"{:02d}".format(i+1) + '    ') 
+        for j, pa in enumerate([self.ds.PA[k] for k in self.reducedImageSet]):
+          self.msgPrint ( "{:12.3f}".format(self.ROIbgs[i,j]) )
+        self.msgPrint (os.linesep)      
+      if self.dataType == "PD-SNR" or self.dataType == "LCTherm": #raw data is a 1d array signal vs ROI.PD
         for k in range(len(self.reducedImageSet)):
-          self.rdPlot.plot(self.rdx, rd[:,k],pen=self.setPlotColor(0),symbolBrush=self.setPlotColor(0), symbolPen='w', name=self.currentROIs.ROIs[0].Name)    
-    self.rdy = rd   #returns a numpy array of raw data (ave signal in an ROI)
-    self.std=std    #returns a numpy array of standard deviation of signal in ROI
-    self.background=float(self.ui.lblBackGround.text()) #set background counts for fits
-    if self.currentROIs.showBackgroundROI:    #obtain background from signal free region (SNR ROI)
-      self.rdBackground=np.zeros(len(self.reducedImageSet))
-      for j, pa in enumerate([self.ds.PA[k] for k in self.reducedImageSet]):
-        roi=self.bgROI
-        array = roi.getArrayRegion(pa,self.imv.getImageItem())
-        self.rdBackground[j]= (np.average(array)-self.ds.ScaleIntercept[self.reducedImageSet[j]])/self.ds.ScaleSlope[self.reducedImageSet[j]] 
-      self.background=np.average(self.rdBackground)
-      self.ui.lblBackGround.setText(str(self.background))
-    if self.currentROIs.showSNRROI:    #obtain noise from signal region by subtraction of two images
-      self.rdNoise=np.zeros(len(self.reducedImageSet))
-      for j, pa in enumerate([self.ds.PA[k] for k in self.reducedImageSet]):
-        roi=self.snrROI
-        array = roi.getArrayRegion(pa,self.imv.getImageItem())
-        self.rdNoise[j]= (np.average(array)-self.ds.ScaleIntercept[self.reducedImageSet[j]])/self.ds.ScaleSlope[self.reducedImageSet[j]] 
-      if self.rdNoise.shape[0]==2:
-        self.noise=self.rdNoise[1]-self.rdNoise[0]
-        self.msgPrint('noise = ' + str(self.noise))
-      else:
-        self.msgPrint('did not find 2 images for noise = analysis')
-    self.line1 = pg.InfiniteLine(pos=np.average(self.rdx),  movable=True, angle=90, label='x={value:0.3f}', 
-                labelOpts={'position':0.1, 'color': (200,200,100), 'fill': (200,200,200,50), 'movable': True})
-    self.line2 = pg.InfiniteLine( movable=True, angle=0, pen=(0, 0, 200),  hoverPen=(0,200,0), label='y={value:0.3f}', 
-                labelOpts={'color': (200,200,100), 'movable': True, 'fill': (200,200,200,50)})
-    self.rdPlot.addItem(self.line1)
-    self.rdPlot.addItem(self.line2)
-       
+          self.rdPlot.plot(self.rdx, rd[:,k],pen=self.setPlotColor(k),symbolBrush=self.setPlotColor(0), symbolPen='w', name=self.currentROIs.ROIs[0].Name)
+      if self.dataType == "Dif" and self.ADCmap: #raw data is a 1d array signal vs ROI.Index
+          for k in range(len(self.reducedImageSet)):
+            self.rdPlot.plot(self.rdx, rd[:,k],pen=self.setPlotColor(0),symbolBrush=self.setPlotColor(0), symbolPen='w', name=self.currentROIs.ROIs[0].Name)    
+      self.rdy = rd   #returns a numpy array of raw data (ave signal in an ROI)
+      self.std=std    #returns a numpy array of standard deviation of signal in ROI
+      self.background=float(self.ui.lblBackGround.text()) #set background counts for fits
+      if self.currentROIs.showBackgroundROI:    #obtain background from signal free region (SNR ROI)
+        self.rdBackground=np.zeros(len(self.reducedImageSet))
+        for j, pa in enumerate([self.ds.PA[k] for k in self.reducedImageSet]):
+          roi=self.bgROI
+          array = roi.getArrayRegion(pa,self.imv.getImageItem(),affine=self.affineROIArray)
+          self.rdBackground[j]= (np.average(array)-self.ds.ScaleIntercept[self.reducedImageSet[j]])/self.ds.ScaleSlope[self.reducedImageSet[j]] 
+        self.background=np.average(self.rdBackground)
+        self.ui.lblBackGround.setText(str(self.background))
+      if self.currentROIs.showSNRROI:    #obtain noise from signal region by subtraction of two images
+        self.rdNoise=np.zeros(len(self.reducedImageSet))
+        for j, pa in enumerate([self.ds.PA[k] for k in self.reducedImageSet]):
+          roi=self.snrROI
+          array = roi.getArrayRegion(pa,self.imv.getImageItem(),affine=self.affineROIArray)
+          self.rdNoise[j]= (np.average(array)-self.ds.ScaleIntercept[self.reducedImageSet[j]])/self.ds.ScaleSlope[self.reducedImageSet[j]] 
+        if self.rdNoise.shape[0]==2:
+          self.noise=self.rdNoise[1]-self.rdNoise[0]
+          self.msgPrint('noise = ' + str(self.noise))
+        else:
+          self.msgPrint('did not find 2 images for noise = analysis \n')
+      self.line1 = pg.InfiniteLine(pos=np.average(self.rdx),  movable=True, angle=90, label='x={value:0.3f}', 
+                  labelOpts={'position':0.1, 'color': (200,200,100), 'fill': (200,200,200,50), 'movable': True})
+      self.line2 = pg.InfiniteLine( movable=True, angle=0, pen=(0, 0, 200),  hoverPen=(0,200,0), label='y={value:0.3f}', 
+                  labelOpts={'color': (200,200,100), 'movable': True, 'fill': (200,200,200,50)})
+      self.rdPlot.addItem(self.line1)
+      self.rdPlot.addItem(self.line2)
+    except:
+      self.msgPrint('Cannot plot raw data')
+         
   def fitData(self):
+    try:
       self.background=float(self.ui.lblBackGround.text()) #set background counts for fits
       self.messageLogOn=True
       self.messageLog=''
@@ -1491,7 +1661,7 @@ class PhantomViewer(QMainWindow):
         self.fitT2SEData(self.rdx,self.rdy)
       if self.dataType == "PD-SNR":
         self.resultsLogModeX=False
-        self.resultsLogModeY=True  
+        self.resultsLogModeY=False  
         self.fitPDSNR()    
       if self.dataType == "Dif":
         if not self.ADCmap:
@@ -1507,6 +1677,8 @@ class PhantomViewer(QMainWindow):
       self.resultsPlot.setLogMode(x=self.resultsLogModeX,y=self.resultsLogModeY) 
       self.fitLog=self.messageLog
       self.messageLogOn=False
+    except:
+      self.msgPrint('Cannot fit data')
           
   def showADCmap(self):
       self.resultsPlot.clear()
@@ -1523,8 +1695,8 @@ class PhantomViewer(QMainWindow):
       """Fits Diffusion data, calls fitting routines in DifModel"""
       self.resy=np.zeros((len(self.pgROIs),len(bValue)))
       self.referenceError=np.zeros(len(self.pgROIs))
-      self.fitx =np.arange(100) * np.amax(bValue) * 1.1 /100  #generate bValues for fit plot
-      self.fity=np.zeros((len(self.pgROIs),100))
+      self.fitx =np.arange(len(self.fitx)) * np.amax(bValue) * 1.1 /len(self.fitx)  #generate bValues for fit plot
+      self.fity=np.zeros((len(self.pgROIs),len(self.fity)))
       self.Difresults=np.zeros((len(self.pgROIs),DifModel.initializeDifModel ()))  #bValue fitting results, first index = ROI, second =ADC, third = S0
       self.Difstderror=np.zeros((len(self.pgROIs),DifModel.initializeDifModel ()))  #array for standard error from fits
       self.msgPrint ("Diffusion fit summary; ADC in mm2/s" + os.linesep)
@@ -1567,22 +1739,34 @@ class PhantomViewer(QMainWindow):
       self.report =  self.report + self.ui.txtResults.toPlainText() + sr   #add recent results to the beginning of the report 
                   
   def fitT2SEData(self, TE, data):   
-      """Fits T2-SE data, calls fitting routines in T1SE"""
+      """Fits T2-SE magnitude data with an exponetial model, calls fitting routines in T1SE"""
       #self.currentROIs = self.Phantom.ROIsets[1]
+      self.varySEBaseline= not self.ui.rbFixSEB.isChecked()   #flag to determine if baseline is to be varied
       self.resy=np.zeros((len(self.pgROIs),len(TE)))
       self.referenceError=np.zeros(len(self.pgROIs))
-      self.fitx =np.arange(100) * np.amax(TE) * 1.1 /100  #generate TEs for fit plot
-      self.fity=np.zeros((len(self.pgROIs),100))
+      self.fitx =np.arange(len(self.fitx)) * np.amax(TE) * 1.1 /len(self.fitx)  #generate TEs for fit plot
+      self.fity=np.zeros((len(self.pgROIs),len(self.fitx)))
       self.T2results=np.zeros((len(self.pgROIs),T2SE.initializeT2SE ()))  #TE fitting results, first index = ROI, second index = parameter referred to in T1Params
       self.msgPrint ("T2-SE fit summary" + os.linesep)
-      self.msgPrint ("!!! not fitting points below noise floor =  " +  "{:6.2f}".format(self.noisefactor*self.background) + "\n" )      
-      self.msgPrint ("ROI  T2(ms)  T2err(%)        Si  Sierr(%)         B   Berr(%) T2ref(ms)  T2dev(%)    nFitPoints" + os.linesep)
+      if self.varySEBaseline:
+        self.msgPrint ("!!! Varying baseline, using all points below saturation \n" )
+      else:
+        self.msgPrint ("!!! Baseline fixed at 0, not fitting points below noise floor =  " +  "{:6.2f}".format(self.noisefactor*self.background) + "\n" )      
+      if self.reportReferenceValues:
+        rv=' T2ref(ms)  T2dev(%)  '
+      else:
+        rv=''
+      self.msgPrint ("ROI  T2(ms)  T2err(%)        Si  Sierr(%)         B   Berr(%)" + rv +"  nFitPoints" + os.linesep)
       sr = "T2-SE fitting details" + "\n"
+
       for i, roi in enumerate(self.pgROIs):
-          params=T2SE.initializeT2SE (i,TE, data[i,:],self.currentROIs.ROIs[i], self.useROIValues, self.background)
+          params=T2SE.initializeT2SE (nroi=i,TE=TE, data=data[i,:],roi=self.currentROIs.ROIs[i], useROIs=self.useROIValues, B=self.background, varyB=self.varySEBaseline)
           pdicti=params[0] #parameter dictionary
           plist=params[1] #parameter list
-          d= data[i,:] > self.noisefactor*self.background  
+          if self.varySEBaseline: #If the baseline is varied, use all data 
+            d= data[i,:] < self.signalSaturation-2  #d is a boolean array marking all element great than 0
+          else: #If the baseline is not varied, only use data above the user input background to fit 
+            d= data[i,:] > self.noisefactor*self.background
           nfitpoints = len(data[i,d])
           try: 
             out = lmfit.minimize(T2SE.T2SE,pdicti,args=(TE[d],data[i,d]))
@@ -1599,20 +1783,29 @@ class PhantomViewer(QMainWindow):
             sr = sr + "ROI " + "{:02d}".format(i+1)+os.linesep  #build output report text for detailed fitting info
             for p in plist:
               self.T2results[i,plist.index(p)]=pdict[p].value #populate output array
-              if pdict[p].value>0:  #calculate standard error
-                se=100*pdict[p].stderr/pdict[p].value
-              else:
+              try:
+                se=100.0*pdict[p].stderr/pdict[p].value
+              except:
                 se=0
               self.msgPrint ("{:10.2f}".format(pdict[p].value) + "  " + "{:6.2f}".format(se)+ "  ")
-            self.msgPrint ("{:8.2f}".format(self.currentROIs.ROIs[i].T2)+ "  " + "{:8.2f}".format((self.T2results[i,0]-self.currentROIs.ROIs[i].T2)/self.currentROIs.ROIs[i].T2*100) + "      " + str(nfitpoints))
-            self.msgPrint (os.linesep)
+            if self.reportReferenceValues:
+              self.referenceError[i]=(self.T2results[i,0]-self.currentROIs.ROIs[i].T2)/self.currentROIs.ROIs[i].T2*100   
+              self.msgPrint ("{:8.2f}".format(self.currentROIs.ROIs[i].T2)+ "  " + "{:8.2f}".format(self.referenceError[i]))
+            self.msgPrint ("      " + str(nfitpoints)+os.linesep)
             sr += lmfit.fit_report(pdict)+os.linesep   #add complete fitting report to output report string
           except:
               self.msgPrint('Cannot fit ROI# ' +str(i))
+              #raise
       self.resultsPlot.clear()
       self.resultsX=np.arange(len(self.pgROIs))+1
       self.resultsY=self.T2results[:,0]
       self.resultsPlot.plot(self.resultsX,self.resultsY ,pen=self.setPlotColor(0),symbolBrush=self.setPlotColor(0), symbolPen='w')
+      if self.reportReferenceValues:
+        self.msgPrint('Ave T2reference error={:6.2f} , std T2reference error={:6.2f}\n'.format(np.mean(self.referenceError), np.std(self.referenceError)))
+        try:   #Take middle values, discard ends\
+          self.msgPrint('Ave T2 center reference error={:6.2f}, std T2 center reference error={:6.2f}'.format(np.mean(self.referenceError[2:-3]), np.std(self.referenceError[2:-3])))
+        except:
+          pass  
       self.report =self.report +  self.ui.txtResults.toPlainText() + sr   #add recent results to the beginning of the report 
           
   def fitT1VFAData(self,FA,data):
@@ -1620,7 +1813,7 @@ class PhantomViewer(QMainWindow):
       self.T1results=np.zeros((len(self.pgROIs),T1VFA.initializeT1VFA ()))  #T1 fitting results, first index = ROI, second index = parameter referred to in T1Params
       self.resy=np.zeros((len(self.pgROIs),len(FA)))
       self.referenceError=np.zeros(len(self.pgROIs))
-      self.fitx =np.arange(100) * np.amax(FA) * 1.1 /100  #generate flip angles for fit plot
+      self.fitx =np.arange(len(self.fitx)) * np.amax(FA) * 1.1 /len(self.fitx)  #generate flip angles for fit plot
       self.fity=np.zeros((len(self.pgROIs),100))
       self.msgPrint ("T1-VFA fit summary" + os.linesep)
       self.msgPrint ("ROI  T1(ms)    T1err(%)    S90  S90err(%)     TR(ms)  TRdev    TE(ms)  TEdev    B  Berr(%)        dFA    dFAerr")
@@ -1661,8 +1854,8 @@ class PhantomViewer(QMainWindow):
       self.T1results=np.zeros((len(self.pgROIs),T1VTR.initializeT1VTR ()))  #T1 fitting results, first index = ROI, second index = parameter referred to in T1Params
       self.resy=np.zeros((len(self.pgROIs),len(TR)))
       self.referenceError=np.zeros(len(self.pgROIs))
-      self.fitx =np.arange(100) * np.amax(TR) * 1.1 /100  #generate flip angles for fit plot
-      self.fity=np.zeros((len(self.pgROIs),100))
+      self.fitx =np.arange(len(self.fitx)) * np.amax(TR) * 1.1 /100  #generate flip angles for fit plot
+      self.fity=np.zeros((len(self.pgROIs),len(self.fitx)))
       self.msgPrint ("T1-VTR fit summary" + os.linesep)
       self.msgPrint ("ROI  T1(ms)T1err(%)    S0  S0err(%)    TE(ms)  TEerr        FA  FAerr(%)  T1ref(ms) T1dev(%)" + os.linesep)
       sr = "T1-VTR fitting details" + "\n"
@@ -1698,8 +1891,8 @@ class PhantomViewer(QMainWindow):
       """Fits T1-IR data, calls fitting routines in T1IRabs"""
       self.resy=np.zeros((len(self.pgROIs),len(TI)))
       self.referenceError=np.zeros(len(self.pgROIs))
-      self.fitx =np.arange(100) * np.amax(TI) * 1.1 /100  #generate TIs for fit plot
-      self.fity=np.zeros((len(self.pgROIs),100))
+      self.fitx =np.arange(len(self.fitx)) * np.amax(TI) * 1.1 /len(self.fitx)  #generate TIs for fit plot
+      self.fity=np.zeros((len(self.pgROIs),len(self.fitx)))
       self.T1results=np.zeros((len(self.pgROIs),T1IRabs.initializeT1IRabs ()))  #T1 fitting results, first index = ROI, second index = parameter referred to in T1Params
       self.msgPrint ("T1-IR fit summary" + os.linesep)
       self.msgPrint ("ROI   T1(ms) T1err(%)        Si  Sierr(%)       B    Berr(%)  T1ref(ms)   T1dev(%)" + os.linesep)
@@ -1731,11 +1924,18 @@ class PhantomViewer(QMainWindow):
       self.resultsY=self.T1results[:,0]
       self.resultsPlot.plot(self.resultsX,self.resultsY ,pen=self.setPlotColor(0),symbolBrush=self.setPlotColor(0), symbolPen='w')
       self.ui.rbResultsY.setChecked(True)
+      self.msgPrint('Ave T1reference error={:6.2f} , std T1reference error={:6.2f}/n'.format(np.mean(self.referenceError), np.std(self.referenceError)))
+      try:   #Take middle values, discard ends\
+        self.msgPrint('Ave T1 center reference error={:6.2f}, std T1 center reference error={:6.2f}'.format(np.mean(self.referenceError[2:-3]), np.std(self.referenceError[2:-3])))
+      except:
+        pass  
       self.report =self.report +  self.ui.txtResults.toPlainText() + sr   #add recent results to the beginning of the report 
 
 
+
   def makeT1IRMap(self,TI,data3d, baseline=0, max=10000.0):
-      """Makes a T1-IR map, calls fitting routines in T1IRmap"""
+      """Makes a T1-IR map, calls fitting routines in T1IRmap
+      Will not fit voxels whose max value is less than baseline, instead will return NaN"""
       t1map=np.zeros((data3d.shape[1],data3d.shape[2]))
       for i in range(data3d.shape[1]):
         for j in range(data3d.shape[2]):
@@ -1750,13 +1950,34 @@ class PhantomViewer(QMainWindow):
       t1map[t1map > max] = np.nan    #set large values to zero
       return t1map
 
+  def makeT1VFAMap(self,FA,data3d, baseline=0, max=10000.0):
+      """Makes a T1-VFA map, calls fitting routines in T1VFA
+      Will not fit voxels whose max value is less than baseline, instead will return NaN"""
+      t1map=np.zeros((data3d.shape[1],data3d.shape[2]))
+      trArray=np.array([self.ds.TR[j] for j in self.reducedImageSet])[0]
+      self.msgPrint('Making T1-VFA map, FA(deg)={}, TR(ms)={}'.format(np.array2string(FA*180/np.pi), np.array2string(trArray))) 
+      for i in range(data3d.shape[1]):
+        for j in range(data3d.shape[2]):
+          if np.amax(data3d[:,i,j]) >baseline:
+            params=T1VFAmap.init (FA=FA, data=data3d[:,i,j],TR=trArray,TE=np.array([self.ds.TE[j] for j in self.reducedImageSet])[0] ) #note VFA model needs TR
+            pdicti=params[0] #parameter dictionary
+            plist=params[1] #parameter list
+            out = lmfit.minimize(T1VFAmap.objfunction,pdicti,args=(FA,data3d[:,i,j]))
+            t1map[i,j]= out.params['T1'].value
+          else:
+            t1map[i,j]=np.nan
+      t1map[t1map > max] = np.nan    #set large values to zero
+      return t1map
+
   def makeT2SEMap(self,TE,data3d, baseline=0, max=10000.0):
-      """Makes a T2-SE map, calls fitting routines in T2SEmap"""
+      """Makes a T2-SE map, calls fitting routines in T2SEmap
+      goes voxel by voxel, needs to be made faster"""
+      self.varySEBaseline= not self.ui.rbFixSEB.isChecked()   #flag to determine if baseline is to be varied
       t2map=np.zeros((data3d.shape[1],data3d.shape[2]))
       for i in range(data3d.shape[1]):
         for j in range(data3d.shape[2]):
           if np.amax(data3d[:,i,j]) >baseline:
-            params=T2SEmap.init (TE, data3d[:,i,j])
+            params=T2SEmap.init (TE, data3d[:,i,j], bvar=self.varySEBaseline)
             pdicti=params[0] #parameter dictionary
             plist=params[1] #parameter list
             out = lmfit.minimize(T2SEmap.objFunction,pdicti,args=(TE,data3d[:,i,j]))
@@ -1783,12 +2004,43 @@ class PhantomViewer(QMainWindow):
       return map 
        
   def fitPDSNR(self):
+    '''Fits and plots proton density (PD) data with linear fit, outputs PD metrics'''
     self.msgPrint('PD-SNR')
-    
+    self.resultsPlot.clear()
+    pd=np.mean(self.rdy/self.ROIbgs, axis=1)
+    pd=pd/pd.max()*100
+    self.PDcal, self.PDcalOffset=np.polyfit(self.rdx,pd,1)      #fit line to gradient vs current to get Gcal
+    pdfit=self.rdx*self.PDcal+self.PDcalOffset
+    self.resultsPlot.plot(self.rdx,pd ,pen=self.setPlotColor(0),symbolBrush=self.setPlotColor(0), symbolPen='w')
+    self.resultsPlot.plot(self.rdx,pdfit) #plot linear fit
+    self.msgPrint('PD slope= {:4.3f}, PD Offset= {:4.3f}\n'.format(self.PDcal,self.PDcalOffset))
+    maxer=100*np.amax(np.abs(pd-pdfit))/  pd[np.argmax(np.abs(pd-pdfit))]            
+    self.msgPrint('PD max error(%)={:4.3f}, PD std error={:4.3f}'.format(maxer, np.std(pd-pdfit)))
+        
+  def calculateSNR(self):
+    '''Calculates SNR by subtracting 2 identical images SNR= sqrt(2)*ave/std(difference)'''
+    if len(self.ds.PA)<=4:
+      self.msgPrint('SNR calculation')
+    else:
+      self.msgPrint('SNR calculation requires 2 identical images, found only {}'.format(len(self.ds.PA)-1))
+      return
+    if len(self.ds.PA)==3:#have only 2 images plus dummy, need a subtracted image in the stack
+      self.addImagetoStack(self.ds.PA[2]-self.ds.PA[1])
+    self.showRawData()
+    signal=(self.rdy[:,0]+self.rdy[:,1])/2    # signal is the average vaue of ROIs in the first 2 images, std is taken from third diffeence image
+    self.SNR=np.sqrt(2)*signal/self.std[:,2]   #returns a numpy SNR array, factor of sqrt(2) to account for increase in SD of difference 
+    self.resultsPlot.clear()
+    self.resultsPlot.setLabel('bottom', "Proton Density (%)", units=None)
+    self.resultsPlot.setLabel('left', "SNR")
+    self.resultsPlot.setTitle('SNR')
+    self.resultsPlot.plot(self.rdx,self.SNR ,pen=self.setPlotColor(0),symbolBrush=self.setPlotColor(0), symbolPen='w')
+    for i in range(len(self.SNR)):
+        self.msgPrint('Proton Density= {:4.3f}, signal={:4.3f}, SD={:4.3f}, SNR={:4.3f} \n'.format(self.rdx[i],signal[i], self.std[i,2], self.SNR[i]))
+        
   def fitLCTherm(self,Tc,data):
       """Fits LCTherm data"""
-      self.fitx =np.amin(Tc)+np.arange(100) * (np.amax(Tc)-np.amin(Tc)) /100  #generate Ts for fit plot
-      self.fity=np.zeros(100)
+      self.fitx =np.amin(Tc)+np.arange(len(self.fitx)) * (np.amax(Tc)-np.amin(Tc)) /len(self.fitx)  #generate Ts for fit plot
+      self.fity=np.zeros(len(self.fitx))
       self.msgPrint ("LC Thermometer fit summary" + os.linesep)
       params=LCPowerLawFit.initialize (Tc,data)
       pdicti=params[0] #parameter dictionary
@@ -1816,17 +2068,28 @@ class PhantomViewer(QMainWindow):
           self.resultsPlot.plot(self.resultsX,self.referenceError ,pen=self.setPlotColor(0),symbolBrush=self.setPlotColor(0), symbolPen='w')
            
   def viewFits(self):
+    try:
         """Opens FitPlot window to display quality of fits"""
         if hasattr(self,"viewFitsWindow")==False:
-          self.viewFitsWindow=FitPlots.FitPlots(self.rdx, self.rdy, self.fitx, self.fity, self.resy,header=self.dataHeader)
+          self.viewFitsWindow=FitPlots.FitPlots(self.rdx, self.rdy, self.fitx, self.fity, self.resy,header=self.dataHeader,background=self.background)
           self.viewFitsWindow.setWindowTitle("View Fits:" + self.dataType + "  analysis")
         else:
-          self.viewFitsWindow.__init__(self.rdx, self.rdy, self.fitx, self.fity, self.resy,header=self.dataHeader)
+          self.viewFitsWindow.__init__(self.rdx, self.rdy, self.fitx, self.fity, self.resy,header=self.dataHeader,background=self.background)
           self.viewFitsWindow.setWindowTitle("View Fits:" + self.dataType + "  analysis")
         self.viewFitsWindow.show()
-
+    except:
+      self.msgPrint('Cannot display fits') 
+      raise 
+  def setMapBaseline(self):
+    '''Sets baseline, in % of maximum signal, below which the mapping routine will not try to fit
+    Prevents nonreal values of parmeters from being displayed'''
+    bl, ok = QInputDialog.getDouble(self, 'Map baseline (%)', 'voxels<(baseline*ImageMax) will not be fit', self.mapBaseline*100,0,100)
+    if ok:
+        self.mapBaseline=bl/100
+         
   def makeMap(self):
-    self.map=mapWindow(self)   #define separate window object  for the map
+    if not hasattr(self, 'map'):
+        self.map=mapWindow(self)   #define separate window object  for the map
     #self.map.win      #image stack window
     #self.map.imv    #image stack pyqtgraph image view object
     self.map.win.setWindowTitle('Generating ' + self.dataType + ' Map ...........')
@@ -1839,19 +2102,20 @@ class PhantomViewer(QMainWindow):
       currentSL = self.ds.SliceLocation[self.nCurrentImage]   
       self.reducedImageSet= [i for i, val in enumerate(self.ds.SliceLocation) if np.isclose(val, currentSL , rtol=1e-04, atol=1e-03)] #[0]] something changed, not returning an array now
       self.msgPrint ("Fitting slice location(mm)=" + "{:6.1f}".format(self.ds.SliceLocation[self.nCurrentImage]) + "\n")   
-#     text, ok = QInputDialog.getText(self, 'Image baseline', 'Noise level(voxels<noise level will not be fit)')
-#     if ok:
-#         baseline=float(text)
-#     else:
-#         baseline=0
     max=np.zeros(len(self.reducedImageSet))
     for i, image in enumerate(self.reducedImageSet):
         max[i]= np.amax(self.ds.PA[image])
-    baseline = 0.05*np.amax(max)    
+    baseline = self.mapBaseline*np.amax(max)    
     mapMaking = threading.Thread(target=self.mapMaking(baseline=baseline,dataType=self.dataType))
     mapMaking.start()
     
-  def plotMap(self):
+  def plotMap(self, datatype):
+    if datatype=='T1':
+        self.map.T1maps.append(self.mapArray)
+        self.map.T1mapTitles.append(self.mapTitle)
+    if datatype=='T2':
+        self.map.T2maps.append(self.mapArray)
+        self.map.T2mapTitles.append(self.mapTitle)
     self.map.imv.setImage(self.mapArray)
     self.map.win.setWindowTitle(self.mapTitle)
 
@@ -1867,18 +2131,20 @@ class PhantomViewer(QMainWindow):
         
   def mapMaking(self, baseline=0, dataType=''):
     '''makes T1, T2, ADC maps from current image stack, will not fit any voxels with data below baseline'''
+    slices=[self.ds.SliceLocation[i] for i in self.reducedImageSet]
+    title=', slice= {:.3f},Series='.format(slices[0],self.ds.SeriesDescription[self.reducedImageSet[1]])
     # T1 data
     if dataType == "T1":
       if self.ui.tabT1.currentIndex() == 0: #T1 Inversion Recovery
         ti = np.array([self.ds.TI[i] for i in self.reducedImageSet])
         data3d = np.array([self.ds.PA[i] for i in self.reducedImageSet])
-        self.mapTitle='T1 IR Map'
+        self.mapTitle='T1 IR Map' + title
         self.mapArray=self.makeT1IRMap(ti,data3d, baseline=baseline)
       if self.ui.tabT1.currentIndex() == 1: #T1 VFA
-        fa = np.array([self.ds.FA[i] for i in self.reducedImageSet])
+        fa = np.array([self.ds.FA[i]*np.pi/180 for i in self.reducedImageSet])      #Fiiting routines need flip angle in radians
         data3d = np.array([self.ds.PA[i] for i in self.reducedImageSet])
-        self.mapTitle='T1 FA Map'
-        self.mapArray=self.makeT1IRMap(fa,data3d, baseline=baseline)
+        self.mapTitle='T1 FA Map'+ title
+        self.mapArray=self.makeT1VFAMap(fa,data3d, baseline=baseline)
       if self.ui.tabT1.currentIndex() == 2: #T1 VTR
         self.rdx = np.array([self.ds.TR[j] for j in self.reducedImageSet])
         self.msgPrint ( "T1VTR map")     
@@ -1886,18 +2152,18 @@ class PhantomViewer(QMainWindow):
     if dataType == "T2":
       te = np.array([self.ds.TE[i] for i in self.reducedImageSet])
       data3d = np.array([self.ds.PA[i] for i in self.reducedImageSet])
-      self.mapTitle='TE SE Map'
+      self.mapTitle='TE SE Map'+ title
       self.msgPrint ( "T2 SE map")
       self.mapArray=self.makeT2SEMap(te,data3d, baseline=baseline)
     # Diffusion data
     if dataType == "Dif":
       bvalue = np.array([self.ds.bValue[i] for i in self.reducedImageSet])
       data3d = np.array([self.ds.PA[i] for i in self.reducedImageSet])
-      self.mapTitle='ADC Map'
+      self.mapTitle='ADC Map'+ title
       self.msgPrint ( "ADC map")
       self.mapArray=self.makeADCMap(bvalue,data3d, baseline=baseline)
     self.msgPrint (os.linesep)
-    self.plotMap()
+    self.plotMap(dataType)
 
   def riAnalysis(self):
     '''make sub array with resolution inset, with all non-close voxels set to zero'''
@@ -1952,7 +2218,7 @@ class PhantomViewer(QMainWindow):
     nSGorder=self.ui.sbSliceProfileFittingOrder.value()
     for i, roi in enumerate(self.pgROIs):
       roi.setPen(pens[i])
-      arr=roi.getArrayRegion(self.ds.PA[self.nCurrentImage], self.imv.getImageItem())
+      arr=roi.getArrayRegion(self.ds.PA[self.nCurrentImage], self.imv.getImageItem(),affine=True)
       ls=np.average(arr,axis=0)
       ls=(ls-np.amin(ls))   #noramlize line scan so it goes between 0 and 1
       ls/=np.amax(ls)
@@ -2006,6 +2272,8 @@ class PhantomViewer(QMainWindow):
       if not f:  #if cancel is pressed return
         return None     
       if type(f)==tuple:    #passes  string with PyQt4 and a tuple with PyQt5
+        if f[0]==[]:    #Return if cancelled
+          return None
         fileName=f[0]
       else:
         fileName=f
@@ -2050,10 +2318,12 @@ class PhantomViewer(QMainWindow):
 
   def saveROIarrays(self):
     #save ROI data arrays
-      f = QFileDialog.getSaveFileName(parent=None, caption="BAse File Name for ROI Arrays", directory = '', selectedFilter = ".csv")
+      f = QFileDialog.getSaveFileName(parent=None, caption="File Name for ROI Arrays", directory = '', selectedFilter = ".csv")
       if not f:  #if cancel is pressed return
         return None     
       if type(f)==tuple:    #passes  string with PyQt4 and a tuple with PyQt5
+        if f[0]==[]:    #Return if cancelled
+          return None
         fileName=f[0]
       else:
         fileName=f
@@ -2063,7 +2333,7 @@ class PhantomViewer(QMainWindow):
       for i, roi in enumerate(self.pgROIs):
         for j, pa in enumerate([self.ds.PA[k] for k in self.reducedImageSet]):
           fext="ROI-" +"{:02d}".format(i+1)+"Im" + "{:02d}".format(j+1)+ self.dataType+ '_'+ "{:.2f}".format(self.rdx[j])
-          array = roi.getArrayRegion(pa,self.imv.getImageItem())   
+          array = roi.getArrayRegion(pa,self.imv.getImageItem(),affine=self.affineROIArray)   
           header=self.dataHeader+ ' ROI' +str(i+1) + " Image" + "{:02d}".format(j+1)      
           lfile=file[:idx]+fext+file[idx:]
           np.savetxt(lfile,array.filled(fill_value=0.0),fmt='%.6e', header=header, delimiter=',')
@@ -2081,6 +2351,8 @@ class PhantomViewer(QMainWindow):
       if not f:  #if cancel is pressed return
         return None     
       if type(f)==tuple:    #passes  string with PyQt4 and a tuple with PyQt5
+        if f[0]==[]:    #Return if cancelled
+          return None
         fileName=f[0]
       else:
         fileName=f
@@ -2158,8 +2430,12 @@ class PhantomViewer(QMainWindow):
       self.rdPlot.setLabel('bottom', "PD(%)E")
       self.resultsPlot.setTitle("PD Results")
       self.roiPen = pg.mkPen('y', width=3)
-      self.ROIset = "PDArray"   #determines which ROI set to use via ROIsetdict 
-      self.InitialROIs = self.Phantom.ROIsets[2]     #Current ROIs are initial ROIs with global rotation and translation
+      self.ROIset = "PDArray"   #determines which ROI set to use via ROIsetdict
+      try: #try to open PD/SNR ROIs
+        self.InitialROIs = self.Phantom.ROIsets[2]     #Current ROIs are initial ROIs with global rotation and translation
+      except: #if it does note work try opening systemphantom whihc does have a PD/SNR ROI set
+        self.SystemPhantom()
+        self.InitialROIs = self.Phantom.ROIsets[2] 
       self.resetROIs()
       self.useROIValues = True
     if dataType == "Dif":
@@ -2200,6 +2476,7 @@ class PhantomViewer(QMainWindow):
       self.roiPen = pg.mkPen('p', width=3)      
 
   def TEChanged(self):
+      '''Allows user to change echo time TE values by entering value into line edit'''
       if self.TEChangedFlag == True:
         try:
           self.ds.TE[self.nCurrentImage]=float(self.ui.lblTE.toPlainText())
@@ -2208,12 +2485,22 @@ class PhantomViewer(QMainWindow):
       self.TEChangedFlag == True
       
   def TRChanged(self):
+      '''Allows user to change recovery time TR values by entering value into line edit'''
       if self.TRChangedFlag == True:
         try:
           self.ds.TR[self.nCurrentImage]=float(self.ui.lblTR.toPlainText())
         except:
           pass
       self.TRChangedFlag == True
+      
+  def TIChanged(self):
+      '''Allows user to change inversion time TI values by entering value into line edit'''
+      if self.TIChangedFlag == True:
+        try:
+          self.ds.TI[self.nCurrentImage]=float(self.ui.lblTI.toPlainText())
+        except:
+          pass
+      self.TIChangedFlag == True
 
   def getDouble(self, text1='Qinput dialog box', text2='inputtext'):
       scale,ok = QInputDialog.getDouble(self, "Resolution","enter standard deviation (mm)", 0, 0, 10)
@@ -2221,11 +2508,39 @@ class PhantomViewer(QMainWindow):
         return double
       else:
         return None
-              
-  def msgPrint (self, s):
-          self.ui.txtResults.insertPlainText(s)
-          if self.messageLogOn== True:
-            self.messageLog+=s
+    
+  def openRawDataWindow(self):
+      '''Opens an image window to import and reconstrcut kspace data'''
+      self.rdimw=TNMRviewer(self)
+      self.rdimw.activateWindow()
+      self.rdimw.setWindowTitle(self.rdimw.programID)
+      self.rdimw.show() 
+      
+  def downloadImageStack(self):
+      '''Downloads an image stack from an image window which input and reconstrcuts raw data'''  
+      self.ds=self.rdimw.makeImageStack()
+      self.msgPrint('Image stack downloaded \n')
+      #self.ims.win.setWindowTitle(newdataset)
+      #self.sliceList = sorted(set(self.ds.SliceLocation))   #make an ordered list of slices
+      self.nImages=len(self.ds.FileName)-1
+      self.ui.lblnImages.setText(str(self.nImages))
+      if self.nImages < 1 :
+          limage = 0
+      else:
+          limage = 1
+      self.ui.vsImage.setMinimum(limage)       #set slider to go from 1 to the number of images
+      self.ui.vsImage.setMaximum(self.nImages)
+      self.nCurrentImage=limage
+      self.ui.vsImage.setValue(self.nCurrentImage)
+      self.displayCurrentImage()
+      #self.ims.win.setWindowTitle(self.fileNames[0])
+      self.imswin.show()
+                
+  def msgPrint (self, s, mLog=False):
+      '''prints message in message window and can save in messageLog if self.messageLogOn=True'''
+      self.ui.txtResults.insertPlainText(s)
+      if self.messageLogOn== True or mLog==True:
+        self.messageLog+=s
 
 class fCircleROI(pg.EllipseROI):   #originally was pg.EllipseROI
     """Defines a circular ROI using pyqtgraph's EllipseROI"""
@@ -2237,15 +2552,36 @@ class fCircleROI(pg.EllipseROI):   #originally was pg.EllipseROI
         self.label = pg.TextItem(label, callingform.lblColor, anchor = (0,0))
         self.label.setPos(pos[0],pos[1])
         self.label.setFont(callingform.lblFont)
-        
+        self.ds=callingform.ds
+        self.pv=callingform
         self.path=None    #added when updating to pyqtgraph 0.11 Do not know why it is not there
 
-    def getArrayRegion(self, arr, img=None):
-        arr = pg.ROI.getArrayRegion(self, arr, img)
+    def getArrayRegion(self, pa, img=None, affine=True):
+        '''returns a masked array for the specified roi cut out of the specified image'''
+        if affine:    #return ROI array after affine transformation
+          arr = pg.ROI.getArrayRegion(self, pa, img)
+        else:   #return the raw voxel values
+          j=self.pv.nCurrentImage
+          x=self.pos()[0]    #find roi upper left
+          y=self.pos()[1]
+          xpos=img.pos()[0] #find upper upper coordinates of the image -FOVx/2
+          ypos=img.pos()[1]
+          psx=self.pv.ds.PixelSpacingX[1]
+          psy=self.pv.ds.PixelSpacingY[1]
+#          print (img.scale())
+#          print(xpos,ypos,psx,psy)
+          xul = int((x-xpos)/psx) 
+          yul = int((y-ypos)/psy) 
+          xlr = int((x+self.size()[0]-xpos)/psx) 
+          ylr = int((y+self.size()[1]-ypos)/psy)
+#          print(xul,yul,xlr,ylr)
+          arr=pa[xul:xlr,yul:ylr]
         if arr is None or arr.shape[0] == 0 or arr.shape[1] == 0:
             return None
         w = arr.shape[0]
         h = arr.shape[1]
+        #print ('ROI position', self.pos())
+        #print ('pixel size', img.pixelSize())
         ## generate an ellipsoidal mask
         mask = np.fromfunction(lambda x,y: (((x+0.5)/(w/2.)-1)**2+ ((y+0.5)/(h/2.)-1)**2)**0.5 > 1, (w, h))
         maskedArr = ma.masked_array(arr, mask)
@@ -2282,7 +2618,7 @@ class fCircleROI(pg.EllipseROI):   #originally was pg.EllipseROI
         self.mouseHovering = hover
         if hover:
             self.currentPen = fn.mkPen(255, 255, 0)
-            array = self.getArrayRegion(self.PhantomViewerInstance.ds.PA[self.PhantomViewerInstance.nCurrentImage],self.PhantomViewerInstance.imv.getImageItem())
+            array = self.getArrayRegion(self.PhantomViewerInstance.ds.PA[self.PhantomViewerInstance.nCurrentImage],self.PhantomViewerInstance.imv.getImageItem(),affine=self.pv.affineROIArray)
             mean=array.mean()
             std=array.std()
             self.PhantomViewerInstance.currentROI=self.PhantomViewerInstance.currentROIs.ROIs[self.Index-1]           
@@ -2337,7 +2673,7 @@ class fRectROI(pg.RectROI):
         self.mouseHovering = hover
         if hover:
             self.currentPen = fn.mkPen(255, 255, 0)
-            array = self.getArrayRegion(self.PhantomViewerInstance.ds.PA[self.PhantomViewerInstance.nCurrentImage],self.PhantomViewerInstance.imv.getImageItem())
+            array = self.getArrayRegion(self.PhantomViewerInstance.ds.PA[self.PhantomViewerInstance.nCurrentImage],self.PhantomViewerInstance.imv.getImageItem()) #,affine=self.affineROIArray, j=self.nCurrentImage
             mean=array.mean()
             std=array.std()
             self.PhantomViewerInstance.currentROI=self.PhantomViewerInstance.currentROIs.ROIs[self.Index-1]           
@@ -2372,6 +2708,8 @@ class messageWindow():
     if not f:  #if cancel is pressed return
       return None     
     if type(f)==tuple:    #passes  string with PyQt4 and a tuple with PyQt5
+      if f[0]==[]:    #Return if cancelled
+        return None
       fileName=f[0]
     else:
       fileName=f
@@ -2391,11 +2729,14 @@ class imageStackWindow(PhantomViewer):
     self.win.setCentralWidget(self.imv)
     self.win.setWindowTitle('Image Stack')
     point = self.rect().topRight()
-    self.win.move(point + QPoint(self.width()/2, 0))
+    self.win.move(point + QPoint(int(self.width()/2), 0))
     self.win.statusBar = QStatusBar()
     self.win.setStatusBar(self.win.statusBar)
     self.win.statusBar.show()
-
+    self.imv.ui.roiBtn.setText("Line scan/ROI")
+    self.histLogMode=False    
+    self.statusBar = QStatusBar()
+    self.setStatusBar(self.statusBar)
     self.menu = self.win.menuBar()
 #    self.menu.setToolTipsVisible(True)
     self.imageMenu = self.menu.addMenu('&ImageFiles')
@@ -2488,6 +2829,11 @@ class imageStackWindow(PhantomViewer):
     
 #Analysis    
     self.analysisMenu = self.menu.addMenu('&Analysis')
+    
+    self.actionPDSNR = QAction('Proton Density/ SNR', self)
+    self.actionPDSNR.triggered.connect(pw.PDSNRAnalysis)
+    self.analysisMenu.addAction(self.actionPDSNR)
+    
     self.actionRI = QAction('Resolution Inset', self)
     self.actionRI.triggered.connect(pw.riAnalysis)
     self.analysisMenu.addAction(self.actionRI)
@@ -2525,28 +2871,62 @@ class imageStackWindow(PhantomViewer):
     self.actionFindBackgroundAroundROIs.triggered.connect(pw.findBackgroundAroundROIs)
     self.analysisMenu.addAction(self.actionFindBackgroundAroundROIs)
     
-    self.windowMenu = self.menu.addMenu('&Windows')
+    self.actionMakeMap = QAction('MakeMap', self)
+    self.actionMakeMap.triggered.connect(pw.makeMap)
+    self.actionMakeMap.setStatusTip('Makes map using current image stack and selectd data type ')
+    self.analysisMenu.addAction(self.actionMakeMap) 
+    
+    self.actionSetMapBaseline = QAction('Set Map Baseline', self)
+    self.actionSetMapBaseline.triggered.connect(pw.setMapBaseline)
+    self.actionSetMapBaseline.setStatusTip('Set map baseline signal below which the data is not fit, measures as percntage of max signal')
+    self.analysisMenu.addAction(self.actionSetMapBaseline) 
+    
+    self.actionShowLogPlot = QAction('Show Log Image', self)
+    self.actionShowLogPlot.triggered.connect(self.showLogPlot)   
+    self.analysisMenu.addAction(self.actionShowLogPlot)
+        
+    self.windowMenu = self.menu.addMenu('&Options')
     self.actionWinAlwaysOnTop = QAction('Window always on top', self)
     self.actionWinAlwaysOnTop.triggered.connect(self.winOnTop)
     self.windowMenu.addAction(self.actionWinAlwaysOnTop)
     self.actionWinNotOnTop = QAction('Window not always on top', self)
     self.actionWinNotOnTop.triggered.connect(self.winNotOnTop)
-    self.windowMenu.addAction(self.actionWinNotOnTop)          
-    
+    self.windowMenu.addAction(self.actionWinNotOnTop) 
+#     self.actionHisLog = QAction('Toggle histogram Log axis', self)
+#     self.actionHisLog.triggered.connect(self.toggleHistLogMode)
+#     self.windowMenu.addAction(self.actionHisLog) 
+    self.p4=pg.mkPen('y', width=1)
+    self.measureLine = pg.LineROI((0,0),(0,0),0, pen=self.p4)
+    self.measureLineLength=0        #measurement line length
     self.imv.getView().setLabel('bottom',"H","mm")
     self.imv.getView().setLabel('left',"V","mm")
     
   def winOnTop(self):
-        self.win.setWindowFlag(Qt.WindowStaysOnTopHint, True)
-        self.pw.imswin.show()
+        try:
+          self.win.setWindowFlag(Qt.WindowStaysOnTopHint, True)
+          self.pw.imswin.show()
+        except:
+          pass
         
   def winNotOnTop(self):
-        self.win.setWindowFlag(Qt.WindowStaysOnTopHint, False)
-        self.pw.imswin.show()
-
+        try:
+          self.win.setWindowFlag(Qt.WindowStaysOnTopHint, False)
+          self.pw.imswin.show()
+        except:
+          pass
+        
+  def toggleHistLogMode(self):
+        self.histLogMode = not self.histLogMode
+        if self.histLogMode:
+          self.imv.ui.histogram.setLogMode(None,True)    #Not working in pyqtgraph 0.11!!set the histogram y axis to a log scale  
+    
+  def showLogPlot(self):
+      im=self.imv.image
+      self.imv.setImage(np.log10(im, out=np.zeros_like(im), where=(im!=0)))
+        
 class mapWindow(PhantomViewer):
   def __init__(self, pw, parent = None):
-    '''Define image stack windows and menus, pw is the parent PhantomViewer window'''    
+    '''Define map windows and menus, pw is the parent PhantomViewer window'''    
     super(PhantomViewer, self).__init__()
     self.win = QMainWindow()
     #self.win.setWindowFlags(Qt.WindowStaysOnTopHint)        #having the window always on top can be a problem
@@ -2555,14 +2935,229 @@ class mapWindow(PhantomViewer):
     self.win.setCentralWidget(self.imv)
     self.win.setWindowTitle('Map')
     point = self.rect().topRight()
-    self.win.move(point + QPoint(self.width()/2, 0)) 
+    self.win.move(point + QPoint(int(self.width()/2), 0)) 
+#     self.histLogMode=True
+#     self.imv.ui.histogram.plot.getAxis('bottom').setLogMode(True)    #Not working in pyqtgraph 0.11!!set the histogram y axis to a log scale
+    self.T1maps=[]      #list of T1 maps
+    self.T1mapTitles=[]
+    self.T2maps=[]
+    self.T2mapTitles=[]   
+    self.Difmaps=[]
+    self.cT1map=0       #indexes current T1 map that is displayed
+    self.cT2map=0       #indexes current T2 map that is displayed
+    self.cDifmap=0       #indexes current Difusion Coefficient map that is displayed
+    self.liparicm=CustomColorMaps.lipari() # color map for T1 
+    self.naviacm=CustomColorMaps.navia() # color map for T2 
+    self.logMaps=True
+    self.mapLabels=[]       #List of labels put on the map
+    self.proxy = pg.SignalProxy(self.imv.view.scene().sigMouseMoved, rateLimit=60, slot=self.mouseMoved)
+    self.proxy3 = pg.SignalProxy(self.imv.view.scene().sigMouseClicked, rateLimit=60, slot=self.mouseButtonPress)
+    self.vLine = pg.InfiniteLine(angle=90, movable=False)
+    self.hLine = pg.InfiniteLine(angle=0, movable=False)
+    self.imv.addItem(self.vLine, ignoreBounds=True)
+    self.imv.addItem(self.hLine, ignoreBounds=True)
+    self.label_font = QFont()
+    self.label_font.setPointSize(14)
+    self.labelColor=(200, 250, 200)
+    self.statusBar = QStatusBar()
+    self.win.setStatusBar(self.statusBar)
     self.menu = self.win.menuBar()
     self.imageMenu = self.menu.addMenu('&Images')
-    self.actionAddToStack = QAction('Add Map to stack', self)
-    self.actionAddToStack.setStatusTip('AddToStack')
-    self.actionAddToStack.triggered.connect(pw.addMaptoStack)
-    self.imageMenu.addAction(self.actionAddToStack)
+    
+    self.actionT1ColorMap = QAction('Show Standard T1 colormap', self)
+    self.actionT1ColorMap.triggered.connect(self.setT1ColorMap)
+    self.imageMenu.addAction(self.actionT1ColorMap)
+    
+    self.actionR1ColorMap = QAction('Show R1 colormap', self)
+    self.actionR1ColorMap.triggered.connect(self.setR1ColorMap)
+    self.imageMenu.addAction(self.actionR1ColorMap)
+    
+    self.actionT2ColorMap = QAction('Show Standard T2 colormap', self)
+    self.actionT2ColorMap.triggered.connect(self.setT2ColorMap)
+    self.imageMenu.addAction(self.actionT2ColorMap)
+    
+    self.actionR2ColorMap = QAction('Show R2 colormap', self)
+    self.actionR2ColorMap.triggered.connect(self.setR2ColorMap)
+    self.imageMenu.addAction(self.actionR2ColorMap) 
+    self.actionToggleLogMode = QAction('Toggle Log Mode', self)
+    self.actionToggleLogMode.triggered.connect(self.toggleLogMode)   
+    self.imageMenu.addAction(self.actionToggleLogMode)
+    
+ 
 
+    self.imageMenu = self.menu.addMenu('&Labels')
+    
+    self.actionRemoveLabel = QAction('Remove label', self)
+    self.actionRemoveLabel.triggered.connect(self.removeLabel)
+    self.imageMenu.addAction(self.actionRemoveLabel)    
+    
+    self.actionRemoveAllLabels = QAction('Remove all labels', self)
+    self.actionRemoveAllLabels.triggered.connect(self.removeAllLabels)
+    self.imageMenu.addAction(self.actionRemoveAllLabels)    
+#     self.actionListColorMaps = QAction('List colormaps', self)
+#     self.actionListColorMaps.triggered.connect(self.listColorMaps)
+#     self.imageMenu.addAction(self.actionListColorMaps)
+
+    self.actionAddToStack = QAction('Add Map to stack', self)
+    #self.actionAddToStack.triggered.connect(listColorMaps)
+    self.imageMenu.addAction(self.actionAddToStack)
+    
+    self.processMenu = self.menu.addMenu('&Process Data')
+    
+    self.actionPolynomialCal = QAction('Polynomial Calibration', self)
+    self.actionPolynomialCal.triggered.connect(self.polynomialCal)
+    self.processMenu.addAction(self.actionPolynomialCal) 
+    self.polyCalA=0
+    self.polyCalB=1
+    self.polyCalC=0
+       
+    
+
+  def setT1ColorMap(self):
+    '''Sets colormap to lipari, proposed standard T1 colormap and takes log of data'''
+    if len(self.T1maps)==0:     #no T1 maps to plot
+          return
+    if self.cT1map >= len(self.T1maps): #If beyond the last map, go back to the first
+        self.cT1map=0
+    self.T1map= self.T1maps[self.cT1map]
+    self.imv.setColorMap(self.liparicm)
+    self.logT1map=res = np.log10(self.T1map, out=np.zeros_like(self.T1map), where=(self.T1map!=0)) 
+    if self.logMaps:
+        self.imv.setImage(self.logT1map)
+    else:
+        self.imv.setImage(self.T1map)
+    self.imv.setLevels(min=1, max=4)
+    self.win.setWindowTitle(self.T1mapTitles[self.cT1map])
+    self.cT1map+=1
+    
+  def setT2ColorMap(self):
+    '''Sets colormap to navia, proposed standard T2 colormap and takes log of data'''
+    if len(self.T2maps)==0:     #no T1 maps to plot
+          return
+    if self.cT2map >= len(self.T2maps): #If beyond the last map, go back to the first
+        self.cT2map=0
+    self.T2map= self.T2maps[self.cT2map]
+    self.imv.setColorMap(self.naviacm)
+    self.logT2map=res = np.log10(self.T2map, out=np.zeros_like(self.T2map), where=(self.T2map!=0)) 
+    if self.logMaps:
+        self.imv.setImage(self.logT2map)
+    else:
+        self.imv.setImage(self.T2map)
+    self.imv.setLevels(min=1, max=4)
+    self.win.setWindowTitle(self.T2mapTitles[self.cT2map])
+    self.cT2map+=1
+    
+  def setR2ColorMap(self):
+    '''Sets colormap to navia, proposed standard T2 colormap and takes log of data'''
+    if len(self.T2maps)==0:     #no T1 maps to plot
+          return
+    if self.cT2map >= len(self.T2maps): #If beyond the last map, go back to the first
+        self.cT2map=0
+    self.R2map= 1000/self.T2maps[self.cT2map]
+    #self.imv.setColorMap(self.naviacm)
+    self.logR2map = np.log10(self.R2map, out=np.zeros_like(self.R2map), where=(self.R2map!=0)) 
+    if self.logMaps:
+        self.imv.setImage(self.logR2map)
+    else:
+        self.imv.setImage(self.R2map)
+    self.imv.setLevels(min=1, max=4)
+    self.win.setWindowTitle('R2 Map from: '+ self.T2mapTitles[self.cT2map])
+
+  def setR1ColorMap(self):
+    '''Sets colormap to lipari, proposed standard T1 colormap and takes log of data'''
+    if len(self.T1maps)==0:     #no T1 maps to plot
+          return
+    if self.cT1map >= len(self.T1maps): #If beyond the last map, go back to the first
+        self.cT1map=0
+    self.R1map= 1000/self.T1maps[self.cT1map]
+    #self.imv.setColorMap(self.naviacm)
+    self.logR1map = np.log10(self.R1map, out=np.zeros_like(self.R1map), where=(self.R1map!=0)) 
+    if self.logMaps:
+        self.imv.setImage(self.logR1map)
+    else:
+        self.imv.setImage(self.R1map)
+    self.imv.setLevels(min=1, max=4)
+    self.win.setWindowTitle('R1 Map from: '+ self.T1mapTitles[self.cT1map])
+        
+  def polynomialCal(self):
+      '''Calibrates image using a quadratic polynomial y=a+bx+cx^2'''
+      a, ok = QInputDialog().getDouble(self, "y=a+bx+cx^2","enter a", self.polyCalA, -1E5, 1E5,decimals=4)
+      if ok :
+        self.polyCalA=a
+      else:
+        pass
+      b, ok = QInputDialog().getDouble(self, "y=a+bx+cx^2","enter b", self.polyCalB, -1E5, 1E5,decimals=4)
+      if ok :
+        self.polyCalB=b
+      else:
+        pass
+      c, ok = QInputDialog().getDouble(self, "y=a+bx+cx^2","enter c", self.polyCalC, -1E5, 1E5,decimals=4)
+      if ok :
+        self.polyCalC=c
+      else:
+        pass
+      text, ok = QInputDialog.getText(self, "Image Title", "title=")
+      image=self.polyCalA+ self.polyCalB*self.imv.image + self.polyCalC*self.imv.image**2
+      self.imv.setImage(image)
+      self.win.setWindowTitle(text+'; Cal: y={:.4f} +{:.4f}x + {:.4f}x^2 '.format(self.polyCalA,self.polyCalB,self.polyCalC))
+              
+  def toggleLogMode(self):
+      self.logMaps = not self.logMaps
+      
+  def addLabel(self,x,y):
+      text, ok = QInputDialog.getText(self, "Add Label", "text=")
+      self.text = pg.LabelItem(text, color=self.labelColor)
+      self.text.setPos(x,y)
+      self.text.setFont(self.label_font)      
+      self.imv.addItem(self.text)
+      self.mapLabels.append(self.text)
+      
+  def removeLabel(self):
+      self.imv.removeItem(self.text)
+      
+  def removeAllLabels(self):
+      for label in self.mapLabels:
+          self.imv.removeItem(label)
+      
+  def mouseButtonPress(self, evt):
+      '''Mouse click event button
+          Used for zeroing kspace points or other processing options'''
+      mouseEvent= evt[0]  ## using signal proxy turns original arguments into a tuple
+      button=mouseEvent.button()
+      pos=mouseEvent.pos()
+      scenePos=mouseEvent.scenePos()
+      if button==1 and mouseEvent.double():
+        if self.imv.view.sceneBoundingRect().contains(pos):
+            mousePoint = self.imv.view.vb.mapToView(pos)
+            self.Xindex=mousePoint.x() 
+            self.Yindex=mousePoint.y()
+            if self.Xindex>=0 and self.Yindex>=0:
+                self.addLabel( self.Xindex, self.Yindex)
+                              
+  def mouseMoved(self,evt): 
+    '''mouse move event to move crosshairs and display location and values'''
+    pos = evt[0]  ## using signal proxy turns original arguments into a tuple
+    if self.imv.view.sceneBoundingRect().contains(pos):
+      mousePoint = self.imv.view.vb.mapSceneToView(pos)
+      try:
+        if self.imv.view.sceneBoundingRect().contains(pos):
+            mousePoint = self.imv.view.vb.mapSceneToView(pos)
+            self.Xindex=int(mousePoint.x()) 
+            self.Yindex=int(mousePoint.y() )
+            im=self.imv.getImageItem().image
+            if self.Xindex>=0 and self.Xindex<im.shape[0] and self.Yindex>=0 and self.Yindex<im.shape[1]:
+                        if self.logMaps:
+                            #vv=10**(im[self.Xindex,self.Yindex])
+                            vv= im[self.Xindex,self.Yindex]
+                        else:
+                            vv= im[self.Xindex,self.Yindex]
+                        self.statusBar.showMessage('X={}, Y={}, Value={:.2f}'.format(self.Xindex, self.Yindex, vv),5000)#
+      except:
+        pass   
+      self.vLine.setPos(mousePoint.x())
+      self.hLine.setPos(mousePoint.y())    
+
+           
 class phantomImageWindow(PhantomViewer):
   def __init__(self, fname, parent = None):
     '''Defines image stack windows and menus, rv is the parent PhantomViewer window'''    
@@ -2585,6 +3180,7 @@ def exception_hook(exctype, value, traceback):
 sys.excepthook = exception_hook                               
 if __name__ == '__main__':
     app = QApplication(sys.argv)
+    app.setStyle('Fusion') #['Windows', 'WindowsXP', 'WindowsVista', 'Fusion']
     main = PhantomViewer("T1")
     main.show()
     sys.exit(app.exec_())

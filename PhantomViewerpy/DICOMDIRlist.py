@@ -5,14 +5,12 @@ Uses DICOMDIRGui.py created from DICOMDIRGui.ui by QT4
             "designer\pyuic5 designer\DICOMDIRGui.ui -o PhantomViewerpy\DICOMDIRGui5.py"
 @author: stephen russek
 '''
-try:
-  from PyQt4 import QtGui, QtCore
-  from DICOMDIRGui4 import Ui_DICOMDIRGui
-except:
-  from PyQt5 import QtGui, QtCore
-  from DICOMDIRGui5 import Ui_DICOMDIRGui
 
-class DICOMDIRlist(QtGui.QDialog):
+from PyQt5 import QtGui, QtCore
+from PyQt5.QtWidgets import QMainWindow
+from DICOMDIRGui5 import Ui_DICOMDIRGui
+
+class DICOMDIRlist(QMainWindow):
     def __init__(self ,parent = None):
         super(DICOMDIRlist, self).__init__()
         self.ui = Ui_DICOMDIRGui()

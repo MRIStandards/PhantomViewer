@@ -951,6 +951,9 @@
     </property>
     <addaction name="actionData"/>
     <addaction name="actionResiduals"/>
+    <addaction name="actiontoggle_log_Y"/>
+    <addaction name="actiontoggle_log_X"/>
+    <addaction name="actionPlot_all_data"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuDisplay"/>
@@ -969,6 +972,21 @@
   <action name="actionResiduals">
    <property name="text">
     <string>Residuals</string>
+   </property>
+  </action>
+  <action name="actiontoggle_log_Y">
+   <property name="text">
+    <string>toggle log Y</string>
+   </property>
+  </action>
+  <action name="actiontoggle_log_X">
+   <property name="text">
+    <string>toggle log X</string>
+   </property>
+  </action>
+  <action name="actionPlot_all_data">
+   <property name="text">
+    <string>Plot all data</string>
    </property>
   </action>
  </widget>

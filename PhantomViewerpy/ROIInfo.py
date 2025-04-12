@@ -1,12 +1,12 @@
-'''
+r'''
 Created on Mar 3, 2015
-  execute   "designer\pyuic4 designer\ROIInfoGui.ui -o PhantomViewerpy\ROIInfoGui4.py" from system shell to regenerate ROIViewGui.py from ROIViewGui.ui
-            "designer\pyuic5 designer\ROIInfoGui.ui -o PhantomViewerpy\ROIInfoGui5.py"
+  execute   "designer\pyuic5 designer\ROIInfoGui.ui -o PhantomViewerpy\ROIInfoGui5.py" from system shell to regenerate ROIViewGui.py from ROIViewGui.ui
+            
 @author: stephen russek
+
+Window to plot ROI voxels, statistics, and properties
 '''
-from pyqt import *         #imports required PyQt modules, tries PyQT4 then PyQt5
-if pyqtVersion==4:
-  from ROIInfoGui4 import Ui_ROIInfoWindow    #main window Gui
+from pyqt import *         #imports required PyQt modules
 if pyqtVersion==5:
   from ROIInfoGui5 import Ui_ROIInfoWindow    #main window Gui
 import numpy as np
@@ -22,7 +22,7 @@ class ROIInfoWindow(QMainWindow):
         self.ui.pbUpdate.clicked.connect(self.saveChanges)
         self.imv=self.ui.imvROI
         self.imv.ui.roiBtn.setText("Line scan/ ROI")
-        self.imv.ui.histogram.plot.setLogMode(None,True)    #set the histogram y axis to a log scale    
+#        self.imv.ui.histogram.plot.setLogMode(None,True)    #set the histogram y axis to a log scale    
         self.imv.vLine = pg.InfiniteLine(angle=90, movable=False)   #cross hair
         self.imv.hLine = pg.InfiniteLine(angle=0, movable=False)
         self.imv.addItem(self.imv.vLine, ignoreBounds=True)

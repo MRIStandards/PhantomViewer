@@ -3,7 +3,7 @@ Each model is referred to using a modelname and must contain must contain three 
   intializemodelname
   modelname
   fitmodelname
-T2SE : Simple T2 spin echo exponential decay model 
+T2SE : Simple T2 spin echo exponential decay model, assumes fitting to magnitude data >0 
 last modification: 6-3-14
 '''
 
@@ -11,7 +11,7 @@ import lmfit
 import numpy as np
 
 
-def initializeT2SE (nroi=None,TE=None, data=None, roi = None, useROIs = False, B=0):    
+def initializeT2SE (nroi=None,TE=None, data=None, roi = None, useROIs = False, B=0, varyB=False):    
     """initialize parameters for T2SE model"""
     nT2SEparams =3      #max number of parameters, some may be fixed
     if nroi == None:    #if no parameters are passed return the number of fitting parameters for this model
@@ -21,12 +21,17 @@ def initializeT2SE (nroi=None,TE=None, data=None, roi = None, useROIs = False, B
     if useROIs: #if true use ROI values else use best guess
       T2guess = roi.T2  
     else:
-      T2guess=200
-    T2params.add('T2', value= T2guess, min=0., vary = True)
+      T2guess=200.0
+    T2params.add('T2', value= T2guess, min=0.0, vary = True) #exponential time constant
     paramlist.append('T2')
-    T2params.add('Si', value= np.amax(data), vary = True)
+    T2params.add('Si', value= np.amax(data), vary = True) #initial signal
     paramlist.append('Si')
-    T2params.add('B',  value= 0,  min=0., vary = False)
+    bmax=np.amax(data)/10
+#     if varyB: #sets a maximum value for the baseline if it is allowed to vary
+#       bmax=B
+#     else:
+#       bmax=np.inf
+    T2params.add('B',  value= 0.0,min=0,max=bmax,vary = varyB)    #baseline must be >0
     paramlist.append('B')
     return [T2params,paramlist]
 

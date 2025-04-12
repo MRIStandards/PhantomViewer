@@ -28,21 +28,25 @@ def initializeT1IRabs (nroi=None,TI=None, data=None, roi = None, useROIs = False
     T1params.add('Si', value= np.amax(data), vary = True)
     paramlist.append('Si')
     if delta==None:
-        T1params.add('B',  value= 2,  min=1.0, max=3.0, vary = True)
+        T1params.add('B',  value= 2,  min=1.5, max=3.0, vary = True)
     else:
         T1params.add('B',  value= 1+delta,  min=1.5, max=2.5, vary = False)
     paramlist.append('B')
+#     T1params.add('A',  value= 0,  min=0,  vary = True)
+#     paramlist.append('A')
     return [T1params,paramlist]
 
 # define objective function: returns the array to be minimized
 def T1IRabs(params, TI, data):
     """ T1-IR model abs(exponential); TI inversion time array, T1 recovery time"""
+    #A = params['A'].value
     B = params['B'].value
     Si = params['Si'].value
     T1 = params['T1'].value
-
+    
     model = np.abs(Si*(1-B * np.exp(-TI/T1)))
-    return (model - data)
+    obf=model-data
+    return (obf)
 
 def fitT1IRabs(params, TI, data):
     """fits signal vs TI data to T1IRabs model"""

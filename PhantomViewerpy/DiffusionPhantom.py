@@ -29,7 +29,7 @@ DataTypes={"ADC":0,"T1":1,"T2":2}
 DifArrayConcentration=[0,0,0,10,10,20,20,30,30,40,40,50,50]   #%PVP by weight
 DifArrayT1=[2047.7,1448.1,1024.,724.1,512.,362.1,256.,181.,128.,90.5,64.,45.3,32.]    #T1 in ms
 DifArrayADC=[1.099,1.099,1.099,0.860,0.860,0.58,0.58,0.42,0.42,0.275,0.275,0.2, 0.2]  #ADC in 10^-3 mm2/s
-DiffusionPhantomImage = "..\icons\DiffusionPhantom.jpg"
+DiffusionPhantomImage = r"..\icons\DiffusionPhantom.jpg"
 
 class DiffusionPhantom(VPhantom.VPhantom):
   """A virtual phantom that describes NIST-RSNA Isotropic Diffusion Phantom"""

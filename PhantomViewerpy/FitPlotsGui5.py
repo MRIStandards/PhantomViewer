@@ -331,9 +331,18 @@ class Ui_FitPlotsGui(object):
         self.actionData.setObjectName("actionData")
         self.actionResiduals = QtWidgets.QAction(FitPlotsGui)
         self.actionResiduals.setObjectName("actionResiduals")
+        self.actiontoggle_log_Y = QtWidgets.QAction(FitPlotsGui)
+        self.actiontoggle_log_Y.setObjectName("actiontoggle_log_Y")
+        self.actiontoggle_log_X = QtWidgets.QAction(FitPlotsGui)
+        self.actiontoggle_log_X.setObjectName("actiontoggle_log_X")
+        self.actionPlot_all_data = QtWidgets.QAction(FitPlotsGui)
+        self.actionPlot_all_data.setObjectName("actionPlot_all_data")
         self.menuFile.addAction(self.actionSave)
         self.menuDisplay.addAction(self.actionData)
         self.menuDisplay.addAction(self.actionResiduals)
+        self.menuDisplay.addAction(self.actiontoggle_log_Y)
+        self.menuDisplay.addAction(self.actiontoggle_log_X)
+        self.menuDisplay.addAction(self.actionPlot_all_data)
         self.menubar.addAction(self.menuFile.menuAction())
         self.menubar.addAction(self.menuDisplay.menuAction())
 
@@ -351,5 +360,8 @@ class Ui_FitPlotsGui(object):
         self.actionSave.setText(_translate("FitPlotsGui", "Save"))
         self.actionData.setText(_translate("FitPlotsGui", "Data"))
         self.actionResiduals.setText(_translate("FitPlotsGui", "Residuals"))
+        self.actiontoggle_log_Y.setText(_translate("FitPlotsGui", "toggle log Y"))
+        self.actiontoggle_log_X.setText(_translate("FitPlotsGui", "toggle log X"))
+        self.actionPlot_all_data.setText(_translate("FitPlotsGui", "Plot all data"))
 
 from pyqtgraph import PlotWidget

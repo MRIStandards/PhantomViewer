@@ -8,7 +8,7 @@ Uses PhantomViewerGui created from PhantomVIewerGui.ui by QT4
 """
 
 import sys
-from PyQt4 import QtGui, QtCore
+from PyQt5 import QtGui, QtCore
 from PVSetupGui import Ui_PhantomViewerMainWindow
 import PhantomViewer
 try:

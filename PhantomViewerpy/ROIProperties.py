@@ -8,15 +8,14 @@ execute   "pyuic4 ROIPropertiesGui.ui -o ROIPropertiesGui.py" from system shell 
 """
 
 import sys
-try:
-  from PyQt4 import QtGui, QtCore
-except:
-  from PyQt5 import QtGui, QtCore
+
+from PyQt5 import QtGui, QtCore
+from PyQt5.QtWidgets import QMainWindow
 from ROIPropertiesGui import Ui_ROIPropertiesGui
 import numpy as np
 import VPhantom
 
-class ROIProperties(QtGui.QMainWindow):
+class ROIProperties(QMainWindow):
   def __init__(self ,phantom, parent = None):
     super(ROIProperties, self).__init__()
     self.ui = Ui_ROIPropertiesGui()

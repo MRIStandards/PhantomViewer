@@ -9,10 +9,7 @@ Classes and routines to analyze ACR-like resolution inset and compute resolution
 import sys
 import numpy as np
 import copy
-try:
-  from PyQt4 import QtGui, QtCore
-except:
-  from PyQt5 import QtGui, QtCore
+from PyQt5 import QtGui, QtCore
 import pydicom    #import pydicom to read DICOM data sets and DICOMDIR
 import pyqtgraph as pg    #uses pyqtgraph PlotWidget for graphs and ImageView windows for images, http://www.pyqtgraph.org/documentation/introduction.html
 import pyqtgraph.functions as fn
@@ -177,7 +174,7 @@ class resolutionWindow():
     self.win.resize(800,600)
     self.imv = pg.ImageView( view = pg.PlotItem())
     #self.imv.getView().invertY(False)
-    self.imv.ui.histogram.plot.setLogMode(None,True)    #set the histogram y axis to a log scale    
+    #self.imv.ui.histogram.plot.setLogMode(None,True)    #set the histogram y axis to a log scale    
     self.imv.ui.roiBtn.setText("Line scan/ROI")
     self.win.setCentralWidget(self.imv)
     self.win.setWindowTitle('Resolution Inset')

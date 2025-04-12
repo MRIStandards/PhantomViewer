@@ -15,14 +15,15 @@ import pydicom    #pydicom is used to import DICOM images  pydicom.UID
 from pydicom.dataset import Dataset, FileDataset
 from fdftopy import VarianData
 try:
-  import Image  #imports tif gif
+  from PIL import Image  #imports tif gif
 except:
   pass     
 try:
   import imageio
 except:
-   print ('Can not import imageio needed for animated GIFs')
+   print ('Can not import imageio needed for animated GIFs, try pip install imageio')
 import struct
+import matplotlib.pyplot as plt
 
 class ImageList():
   '''Class to contain a generic MR Image list; can accommodate DICOM, tif, fdf (Varian) files; first element in ImageList is a default image '''
@@ -58,10 +59,13 @@ class ImageList():
     self.InstitutionName.append("") 
     self.ImagePosition= []      #upper left corner coordinates
     self.ImagePosition.append(np.array([0,0,0]))
+    self.ImageType= []      #Image type tag 008 008, has magnitude, phase specifier
+    self.ImageType.append('')
     self.ImageCenter= []      #Image center coordinates
     self.ImageCenter.append(np.zeros(3))
-    self.ImagingFrequency= []      #Image center coordinates
+    self.ImagingFrequency= []      #Image frequency
     self.ImagingFrequency.append(0.0)
+
 
     self.MagneticFieldStrength= []
     self.MagneticFieldStrength.append(0.0)    
@@ -119,7 +123,7 @@ class ImageList():
     return 'Added image to stack'
 
   def sort_list(self, list1, list2, reverse=False):
-    '''sorts list1 using lit2, returns sorted list1''' 
+    '''sorts list1 using list2, returns sorted list1''' 
     zipped_pairs = zip(list2, list1) 
     z = [x for _, x in sorted(zipped_pairs, reverse=reverse)]
     return z 
@@ -157,6 +161,7 @@ class ImageList():
       else:
           self.unpackImageFile (pydicom.read_file(str(fileName)), fileName, "dcm")    #if the extension cannot be recognized try DICOM
     except:
+       #raise
        return [False,"Error: Image file cannot be opened:" + fileName]
     return [True, fileName]
         
@@ -219,13 +224,14 @@ class ImageList():
                 scale=65536/np.amax(pixel_array)
                 pixel_array*=scale       #rescale so that max value is 12 bits                             
                 pixel_array = pixel_array.astype(np.uint16)
-            ds.PixelData = pixel_array.tostring()    # image byte data
+            #ds.PixelData = pixel_array.tostring()    # image byte data
+            ds.PixelData = pixel_array.tobytes()    # image byte data
             # Set the transfer syntax
             ds.is_little_endian = True
             ds.is_implicit_VR = True
-            ds.save_as(fileName)
+            ds.save_as(fileName, write_like_original=False)
 
-  def writeAnimatedGIF(self, filename, duration=0.2):         
+  def writeAnimatedGIF(self, filename, duration=500):         
         filename = filename  + ".gif"
         images=[]
         for im in self.PA[1:]:
@@ -235,7 +241,12 @@ class ImageList():
         imagesa-=imagesa.min()    #set lowestvalue to 0
         im=imagesa.astype(float)
         im/=(im.max()/255.0)  #set highest value to 255
-        imageio.mimsave(filename, im.astype(np.uint8), format='GIF', duration=duration)        
+        # cm = plt.get_cmap('gist_rainbow')
+        # colored_image = cm(im)
+        # print (colored_image.shape)
+        # cim=Image.fromarray((colored_image[:, :, :3] * 255).astype(np.uint8))
+        # imageio.mimsave(filename, cim, format='GIF', duration=duration, loop=0) 
+        imageio.mimsave(filename, im.astype(np.uint8), format='GIF', duration=duration, loop=0)        
 
         
   def unpackImageFile(self, ImageFile, FileName, fType): 
@@ -265,9 +276,17 @@ class ImageList():
     self.bValue.append(b)
     self.Columns.append(ImageFile.Columns) if hasattr(ImageFile,"Columns") else self.Columns.append(0) 
 #ImageOrientationPatient is a list of strings
-    self.ColumnDirection.append(np.asfarray(ImageFile.ImageOrientationPatient[3:6])) if hasattr(ImageFile,"ImageOrientationPatient") else self.ColumnDirection.append(np.array([0.,1.,0.]))
-    self.Comment.append(ImageFile.Comment) if hasattr(ImageFile,"Comment") else self.Comment.append("") 
-    self.DataType.append(ImageFile.DataType) if hasattr(ImageFile,"DataType") else self.DataType.append("")
+    try:
+        self.ColumnDirection.append(np.asfarray(ImageFile.ImageOrientationPatient[3:6])) if hasattr(ImageFile,"ImageOrientationPatient") else self.ColumnDirection.append(np.array([0.,1.,0.]))
+    except:
+        pass
+    self.Comment.append(ImageFile.Comment) if hasattr(ImageFile,"Comment") else self.Comment.append("")
+    if hasattr(ImageFile,"DataType"): 
+      self.DataType.append(ImageFile.DataType)
+    elif hasattr(ImageFile,"ImageType"):
+      self.DataType.append(ImageFile.ImageType[2])  
+    else:
+       self.DataType.append("")
     self.Rows.append(ImageFile.Rows) if hasattr(ImageFile,"Rows") else self.Rows.append(0)
     self.StudyDate.append(ImageFile.StudyDate) if hasattr(ImageFile,"StudyDate") else self.StudyDate.append("")
     self.Manufacturer.append(ImageFile.Manufacturer) if hasattr(ImageFile,"Manufacturer") else self.Manufacturer.append("")
@@ -282,8 +301,12 @@ class ImageList():
     self.ProtocolName.append(ImageFile.ProtocolName) if hasattr(ImageFile,"ProtocolName") else self.ProtocolName.append("")    
     self.ImagePosition.append(np.asfarray(ImageFile.ImagePositionPatient)) if hasattr(ImageFile,"ImagePositionPatient") else self.ImagePosition.append(np.array([1.,0.,0.]))
     self.ImagePosition.append(ImageFile.ImagePositionPatient) if hasattr(ImageFile,"ImagePositionPatient") else self.ImagePosition.append(np.array([1.,0.,0.]))
+    self.ImageType.append(ImageFile.ImageType) if hasattr(ImageFile,"ImageType") else self.ImageType.append("")
     self.ReceiveCoilName.append(ImageFile.ReceiveCoilName) if hasattr(ImageFile,"ReceiveCoilName") else self.ReceiveCoilName.append("")
-    self.RowDirection.append(np.asfarray(ImageFile.ImageOrientationPatient[:3])) if hasattr(ImageFile,"ImageOrientationPatient") else self.RowDirection.append(np.array([1.,0.,0.]))
+    try:
+        self.RowDirection.append(np.asfarray(ImageFile.ImageOrientationPatient[:3])) if hasattr(ImageFile,"ImageOrientationPatient") else self.RowDirection.append(np.array([1.,0.,0.]))
+    except:
+        pass
     self.TR.append(ImageFile.RepetitionTime) if hasattr(ImageFile,"RepetitionTime") else self.TR.append(0.0) 
     self.TE.append(ImageFile.EchoTime) if hasattr(ImageFile,"EchoTime") else self.TE.append(0.0)
     self.FA.append(ImageFile.FlipAngle) if hasattr(ImageFile,"FlipAngle") else self.FA.append(0.0)       
@@ -291,7 +314,12 @@ class ImageList():
     self.TI.append(ImageFile.InversionTime) if hasattr(ImageFile,"InversionTime") else self.TI.append(0.0) 
     self.SliceThickness.append(ImageFile.SliceThickness) if hasattr(ImageFile,"SliceThickness") else self.SliceThickness.append(0.0)    
     self.SliceLocation.append(ImageFile.SliceLocation) if hasattr(ImageFile,"SliceLocation") else self.SliceLocation.append(0.0)
-
+# Try to unpack Siemens receive coil info 0051,100f 
+    try:
+      receiveCoil=struct.unpack('12s',ImageFile[0x0051, 0x100f].value)[0]
+      print ('Receivecoil=' +str(recieveCoil))
+    except:
+      receiveCoil=''
 # Phillips scaling corrections FP = (PV-SI)/SS = PV/SS where FP is the floating point value, PV is the pixel value, SI and SS are the scaled slope and intercept
 # SS is in [0x2005, 0x100E] and si is in [0x2005, 0x100D], both are single precision floats
     try:
@@ -314,6 +342,7 @@ class ImageList():
         
     elif fType == "tif":
         self.PA.append(np.array(ImageFile))
+        print(np.array(ImageFile).shape)
     elif fType == "fdf":
       if len(ImageFile.matrix) == 2:  #Varian file has 2d array    
         self.PA.append(ImageFile.PA)

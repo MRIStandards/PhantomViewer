@@ -6,12 +6,31 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1517</width>
-    <height>816</height>
+    <width>1515</width>
+    <height>820</height>
    </rect>
+  </property>
+  <property name="maximumSize">
+   <size>
+    <width>1515</width>
+    <height>820</height>
+   </size>
   </property>
   <property name="windowTitle">
    <string>MainWindow</string>
+  </property>
+  <property name="windowIcon">
+   <iconset>
+    <normaloff>../icons/PVicon.ico</normaloff>../icons/PVicon.ico</iconset>
+  </property>
+  <property name="toolTip">
+   <string/>
+  </property>
+  <property name="iconSize">
+   <size>
+    <width>48</width>
+    <height>48</height>
+   </size>
   </property>
   <widget class="QWidget" name="centralwidget">
    <widget class="QFrame" name="frame_4">
@@ -618,99 +637,6 @@
      <property name="frameShadow">
       <enum>QFrame::Raised</enum>
      </property>
-     <widget class="QLabel" name="label_27">
-      <property name="geometry">
-       <rect>
-        <x>205</x>
-        <y>10</y>
-        <width>42</width>
-        <height>19</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>v(mm)</string>
-      </property>
-      <property name="alignment">
-       <set>Qt::AlignCenter</set>
-      </property>
-      <property name="wordWrap">
-       <bool>true</bool>
-      </property>
-     </widget>
-     <widget class="QLabel" name="label_28">
-      <property name="geometry">
-       <rect>
-        <x>315</x>
-        <y>10</y>
-        <width>39</width>
-        <height>19</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>Value</string>
-      </property>
-     </widget>
-     <widget class="QTextEdit" name="lblValue">
-      <property name="geometry">
-       <rect>
-        <x>355</x>
-        <y>10</y>
-        <width>55</width>
-        <height>19</height>
-       </rect>
-      </property>
-      <property name="frameShape">
-       <enum>QFrame::WinPanel</enum>
-      </property>
-      <property name="verticalScrollBarPolicy">
-       <enum>Qt::ScrollBarAlwaysOff</enum>
-      </property>
-     </widget>
-     <widget class="QTextEdit" name="lblH">
-      <property name="geometry">
-       <rect>
-        <x>150</x>
-        <y>10</y>
-        <width>46</width>
-        <height>19</height>
-       </rect>
-      </property>
-      <property name="frameShape">
-       <enum>QFrame::WinPanel</enum>
-      </property>
-      <property name="verticalScrollBarPolicy">
-       <enum>Qt::ScrollBarAlwaysOff</enum>
-      </property>
-     </widget>
-     <widget class="QLabel" name="label_29">
-      <property name="geometry">
-       <rect>
-        <x>110</x>
-        <y>10</y>
-        <width>43</width>
-        <height>19</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>h(mm)</string>
-      </property>
-     </widget>
-     <widget class="QTextEdit" name="lblV">
-      <property name="geometry">
-       <rect>
-        <x>250</x>
-        <y>10</y>
-        <width>46</width>
-        <height>19</height>
-       </rect>
-      </property>
-      <property name="frameShape">
-       <enum>QFrame::WinPanel</enum>
-      </property>
-      <property name="verticalScrollBarPolicy">
-       <enum>Qt::ScrollBarAlwaysOff</enum>
-      </property>
-     </widget>
      <widget class="QTextEdit" name="lblPhaseEncodeDirection">
       <property name="geometry">
        <rect>
@@ -738,41 +664,6 @@
       </property>
       <property name="text">
        <string>Phase encode direction</string>
-      </property>
-      <property name="alignment">
-       <set>Qt::AlignCenter</set>
-      </property>
-      <property name="wordWrap">
-       <bool>true</bool>
-      </property>
-     </widget>
-     <widget class="QTextEdit" name="lblSliceLocation">
-      <property name="geometry">
-       <rect>
-        <x>515</x>
-        <y>10</y>
-        <width>46</width>
-        <height>21</height>
-       </rect>
-      </property>
-      <property name="frameShape">
-       <enum>QFrame::WinPanel</enum>
-      </property>
-      <property name="verticalScrollBarPolicy">
-       <enum>Qt::ScrollBarAlwaysOff</enum>
-      </property>
-     </widget>
-     <widget class="QLabel" name="label_14">
-      <property name="geometry">
-       <rect>
-        <x>410</x>
-        <y>5</y>
-        <width>106</width>
-        <height>31</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>Slice Loc (mm)</string>
       </property>
       <property name="alignment">
        <set>Qt::AlignCenter</set>
@@ -950,6 +841,198 @@
       </property>
       <property name="wordWrap">
        <bool>true</bool>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_69">
+      <property name="geometry">
+       <rect>
+        <x>91</x>
+        <y>11</y>
+        <width>22</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Col I</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="lblColI">
+      <property name="geometry">
+       <rect>
+        <x>119</x>
+        <y>11</y>
+        <width>16</width>
+        <height>17</height>
+       </rect>
+      </property>
+      <property name="frameShape">
+       <enum>QFrame::WinPanel</enum>
+      </property>
+      <property name="frameShadow">
+       <enum>QFrame::Sunken</enum>
+      </property>
+      <property name="text">
+       <string/>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_70">
+      <property name="geometry">
+       <rect>
+        <x>134</x>
+        <y>11</y>
+        <width>29</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Row J</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="lblRowJ">
+      <property name="geometry">
+       <rect>
+        <x>169</x>
+        <y>11</y>
+        <width>16</width>
+        <height>17</height>
+       </rect>
+      </property>
+      <property name="frameShape">
+       <enum>QFrame::WinPanel</enum>
+      </property>
+      <property name="frameShadow">
+       <enum>QFrame::Sunken</enum>
+      </property>
+      <property name="text">
+       <string/>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_29">
+      <property name="geometry">
+       <rect>
+        <x>184</x>
+        <y>11</y>
+        <width>30</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>h(mm)</string>
+      </property>
+     </widget>
+     <widget class="QTextEdit" name="lblH">
+      <property name="geometry">
+       <rect>
+        <x>220</x>
+        <y>11</y>
+        <width>85</width>
+        <height>19</height>
+       </rect>
+      </property>
+      <property name="frameShape">
+       <enum>QFrame::WinPanel</enum>
+      </property>
+      <property name="verticalScrollBarPolicy">
+       <enum>Qt::ScrollBarAlwaysOff</enum>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_27">
+      <property name="geometry">
+       <rect>
+        <x>311</x>
+        <y>11</y>
+        <width>30</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>v(mm)</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignCenter</set>
+      </property>
+      <property name="wordWrap">
+       <bool>true</bool>
+      </property>
+     </widget>
+     <widget class="QTextEdit" name="lblV">
+      <property name="geometry">
+       <rect>
+        <x>347</x>
+        <y>11</y>
+        <width>85</width>
+        <height>19</height>
+       </rect>
+      </property>
+      <property name="frameShape">
+       <enum>QFrame::WinPanel</enum>
+      </property>
+      <property name="verticalScrollBarPolicy">
+       <enum>Qt::ScrollBarAlwaysOff</enum>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_28">
+      <property name="geometry">
+       <rect>
+        <x>438</x>
+        <y>11</y>
+        <width>26</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Value</string>
+      </property>
+     </widget>
+     <widget class="QTextEdit" name="lblValue">
+      <property name="geometry">
+       <rect>
+        <x>470</x>
+        <y>11</y>
+        <width>86</width>
+        <height>19</height>
+       </rect>
+      </property>
+      <property name="frameShape">
+       <enum>QFrame::WinPanel</enum>
+      </property>
+      <property name="verticalScrollBarPolicy">
+       <enum>Qt::ScrollBarAlwaysOff</enum>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_14">
+      <property name="geometry">
+       <rect>
+        <x>562</x>
+        <y>11</y>
+        <width>67</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Slice Loc (mm)</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignCenter</set>
+      </property>
+      <property name="wordWrap">
+       <bool>false</bool>
+      </property>
+     </widget>
+     <widget class="QTextEdit" name="lblSliceLocation">
+      <property name="geometry">
+       <rect>
+        <x>635</x>
+        <y>11</y>
+        <width>85</width>
+        <height>19</height>
+       </rect>
+      </property>
+      <property name="frameShape">
+       <enum>QFrame::WinPanel</enum>
+      </property>
+      <property name="verticalScrollBarPolicy">
+       <enum>Qt::ScrollBarAlwaysOff</enum>
       </property>
      </widget>
     </widget>
@@ -1282,6 +1365,15 @@
            </color>
           </brush>
          </colorrole>
+         <colorrole role="PlaceholderText">
+          <brush brushstyle="NoBrush">
+           <color alpha="128">
+            <red>0</red>
+            <green>0</green>
+            <blue>0</blue>
+           </color>
+          </brush>
+         </colorrole>
         </active>
         <inactive>
          <colorrole role="WindowText">
@@ -1419,6 +1511,15 @@
            </color>
           </brush>
          </colorrole>
+         <colorrole role="PlaceholderText">
+          <brush brushstyle="NoBrush">
+           <color alpha="128">
+            <red>0</red>
+            <green>0</green>
+            <blue>0</blue>
+           </color>
+          </brush>
+         </colorrole>
         </inactive>
         <disabled>
          <colorrole role="WindowText">
@@ -1550,6 +1651,15 @@
          <colorrole role="ToolTipText">
           <brush brushstyle="SolidPattern">
            <color alpha="255">
+            <red>0</red>
+            <green>0</green>
+            <blue>0</blue>
+           </color>
+          </brush>
+         </colorrole>
+         <colorrole role="PlaceholderText">
+          <brush brushstyle="NoBrush">
+           <color alpha="128">
             <red>0</red>
             <green>0</green>
             <blue>0</blue>
@@ -1791,6 +1901,15 @@
            </color>
           </brush>
          </colorrole>
+         <colorrole role="PlaceholderText">
+          <brush brushstyle="NoBrush">
+           <color alpha="128">
+            <red>0</red>
+            <green>0</green>
+            <blue>0</blue>
+           </color>
+          </brush>
+         </colorrole>
         </active>
         <inactive>
          <colorrole role="WindowText">
@@ -1922,6 +2041,15 @@
          <colorrole role="ToolTipText">
           <brush brushstyle="SolidPattern">
            <color alpha="255">
+            <red>0</red>
+            <green>0</green>
+            <blue>0</blue>
+           </color>
+          </brush>
+         </colorrole>
+         <colorrole role="PlaceholderText">
+          <brush brushstyle="NoBrush">
+           <color alpha="128">
             <red>0</red>
             <green>0</green>
             <blue>0</blue>
@@ -2065,8 +2193,20 @@
            </color>
           </brush>
          </colorrole>
+         <colorrole role="PlaceholderText">
+          <brush brushstyle="NoBrush">
+           <color alpha="128">
+            <red>0</red>
+            <green>0</green>
+            <blue>0</blue>
+           </color>
+          </brush>
+         </colorrole>
         </disabled>
        </palette>
+      </property>
+      <property name="toolTip">
+       <string>Adjust size of ROIs</string>
       </property>
       <property name="autoFillBackground">
        <bool>true</bool>
@@ -2155,6 +2295,9 @@
          <height>20</height>
         </rect>
        </property>
+       <property name="toolTip">
+        <string>Mouse acts on single ROI</string>
+       </property>
        <property name="text">
         <string>single ROI</string>
        </property>
@@ -2167,6 +2310,9 @@
          <width>101</width>
          <height>20</height>
         </rect>
+       </property>
+       <property name="toolTip">
+        <string>Act on entire ROI set</string>
        </property>
        <property name="text">
         <string>ROI set</string>
@@ -2288,6 +2434,9 @@
         <width>111</width>
         <height>20</height>
        </rect>
+      </property>
+      <property name="toolTip">
+       <string>Opens window with information on  ROI  at mouse pointer</string>
       </property>
       <property name="text">
        <string>View ROI Info</string>
@@ -2528,6 +2677,15 @@
             </color>
            </brush>
           </colorrole>
+          <colorrole role="PlaceholderText">
+           <brush brushstyle="NoBrush">
+            <color alpha="128">
+             <red>0</red>
+             <green>0</green>
+             <blue>0</blue>
+            </color>
+           </brush>
+          </colorrole>
          </active>
          <inactive>
           <colorrole role="WindowText">
@@ -2659,6 +2817,15 @@
           <colorrole role="ToolTipText">
            <brush brushstyle="SolidPattern">
             <color alpha="255">
+             <red>0</red>
+             <green>0</green>
+             <blue>0</blue>
+            </color>
+           </brush>
+          </colorrole>
+          <colorrole role="PlaceholderText">
+           <brush brushstyle="NoBrush">
+            <color alpha="128">
              <red>0</red>
              <green>0</green>
              <blue>0</blue>
@@ -2802,8 +2969,20 @@
             </color>
            </brush>
           </colorrole>
+          <colorrole role="PlaceholderText">
+           <brush brushstyle="NoBrush">
+            <color alpha="128">
+             <red>0</red>
+             <green>0</green>
+             <blue>0</blue>
+            </color>
+           </brush>
+          </colorrole>
          </disabled>
         </palette>
+       </property>
+       <property name="toolTip">
+        <string>Scrolls through image stack</string>
        </property>
        <property name="autoFillBackground">
         <bool>true</bool>
@@ -3459,6 +3638,9 @@
       <height>791</height>
      </rect>
     </property>
+    <property name="toolTipDuration">
+     <number>-1</number>
+    </property>
     <property name="autoFillBackground">
      <bool>true</bool>
     </property>
@@ -3504,7 +3686,7 @@
          <x>20</x>
          <y>20</y>
          <width>99</width>
-         <height>42</height>
+         <height>44</height>
         </rect>
        </property>
        <layout class="QVBoxLayout" name="verticalLayout_4">
@@ -3574,7 +3756,7 @@
        <rect>
         <x>10</x>
         <y>5</y>
-        <width>267</width>
+        <width>269</width>
         <height>151</height>
        </rect>
       </property>
@@ -3596,7 +3778,7 @@
             <x>10</x>
             <y>15</y>
             <width>93</width>
-            <height>42</height>
+            <height>44</height>
            </rect>
           </property>
           <layout class="QVBoxLayout" name="verticalLayout_3">
@@ -3734,7 +3916,7 @@
       <bool>true</bool>
      </property>
      <property name="currentIndex">
-      <number>6</number>
+      <number>0</number>
      </property>
      <widget class="QWidget" name="T1">
       <widget class="QTabWidget" name="tabT1">
@@ -3773,23 +3955,29 @@
            <height>131</height>
           </rect>
          </property>
+         <property name="focusPolicy">
+          <enum>Qt::ClickFocus</enum>
+         </property>
          <property name="autoFillBackground">
-          <bool>true</bool>
+          <bool>false</bool>
          </property>
          <property name="frameShape">
           <enum>QFrame::StyledPanel</enum>
+         </property>
+         <property name="frameShadow">
+          <enum>QFrame::Sunken</enum>
          </property>
          <property name="text">
           <string/>
          </property>
          <property name="pixmap">
-          <pixmap>../icons/T1-IR1model.jpg</pixmap>
+          <pixmap>../PhantomViewerpy/T1-IR1model.jpg</pixmap>
          </property>
          <property name="scaledContents">
           <bool>true</bool>
          </property>
          <property name="wordWrap">
-          <bool>true</bool>
+          <bool>false</bool>
          </property>
         </widget>
         <widget class="QLabel" name="label_48">
@@ -3843,6 +4031,10 @@
           <string>1.0</string>
          </property>
         </widget>
+        <zorder>label_48</zorder>
+        <zorder>rbDelta</zorder>
+        <zorder>leDelta</zorder>
+        <zorder>lblT1IRequ</zorder>
        </widget>
        <widget class="QWidget" name="T1VFA">
         <attribute name="title">
@@ -3870,7 +4062,7 @@
           <bool>true</bool>
          </property>
         </widget>
-        <widget class="QLabel" name="lblT1IRequ_2">
+        <widget class="QLabel" name="lblT1VFAequ">
          <property name="geometry">
           <rect>
            <x>15</x>
@@ -3903,7 +4095,7 @@
         <attribute name="title">
          <string>VTR</string>
         </attribute>
-        <widget class="QLabel" name="lblT1IRequ_3">
+        <widget class="QLabel" name="lblT1VTRequ">
          <property name="geometry">
           <rect>
            <x>20</x>
@@ -3963,7 +4155,7 @@
          <x>10</x>
          <y>0</y>
          <width>356</width>
-         <height>211</height>
+         <height>201</height>
         </rect>
        </property>
        <property name="autoFillBackground">
@@ -3979,7 +4171,10 @@
         <attribute name="title">
          <string>Spin Echo</string>
         </attribute>
-        <widget class="QLabel" name="lblT2_2">
+        <widget class="QLabel" name="lblT2SEequ">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
          <property name="geometry">
           <rect>
            <x>5</x>
@@ -3992,7 +4187,7 @@
           <string/>
          </property>
          <property name="pixmap">
-          <pixmap>icons/T2-1model.jpg</pixmap>
+          <pixmap>../icons/T2-1model.jpg</pixmap>
          </property>
          <property name="scaledContents">
           <bool>true</bool>
@@ -4020,6 +4215,22 @@
           <bool>false</bool>
          </property>
          <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+        </widget>
+        <widget class="QRadioButton" name="rbFixSEB">
+         <property name="geometry">
+          <rect>
+           <x>230</x>
+           <y>30</y>
+           <width>82</width>
+           <height>17</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Fix B=0</string>
+         </property>
+         <property name="checked">
           <bool>true</bool>
          </property>
         </widget>
@@ -4053,7 +4264,7 @@
         <enum>QTabWidget::North</enum>
        </property>
        <property name="currentIndex">
-        <number>0</number>
+        <number>1</number>
        </property>
        <widget class="QWidget" name="PDSNR">
         <attribute name="title">
@@ -4121,8 +4332,8 @@
          <property name="geometry">
           <rect>
            <x>10</x>
-           <y>160</y>
-           <width>306</width>
+           <y>120</y>
+           <width>221</width>
            <height>31</height>
           </rect>
          </property>
@@ -4133,13 +4344,42 @@
           <enum>QFrame::StyledPanel</enum>
          </property>
          <property name="text">
-          <string>SNR NEMA</string>
+          <string>SNR NEMA MS 1-2008 Method 1 R2014</string>
          </property>
          <property name="scaledContents">
           <bool>false</bool>
          </property>
          <property name="wordWrap">
           <bool>true</bool>
+         </property>
+        </widget>
+        <widget class="QLabel" name="label_68">
+         <property name="geometry">
+          <rect>
+           <x>10</x>
+           <y>20</y>
+           <width>281</width>
+           <height>41</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Requires 2 identical image, subtracts image 1 from image 2, SNR=sqrt(2)*avSignal/std</string>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+        </widget>
+        <widget class="QPushButton" name="pbCaclulateSNR">
+         <property name="geometry">
+          <rect>
+           <x>40</x>
+           <y>70</y>
+           <width>75</width>
+           <height>23</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Calculate SNR</string>
          </property>
         </widget>
        </widget>
@@ -4340,7 +4580,7 @@
           <rect>
            <x>10</x>
            <y>15</y>
-           <width>289</width>
+           <width>292</width>
            <height>131</height>
           </rect>
          </property>
@@ -4545,11 +4785,11 @@
           <height>46</height>
          </rect>
         </property>
-        <property name="numDigits">
-         <number>3</number>
+        <property name="digitCount">
+         <number>5</number>
         </property>
         <property name="value" stdset="0">
-         <double>0.000000000000000</double>
+         <double>19.978999999999999</double>
         </property>
        </widget>
        <widget class="QLabel" name="label_67">
@@ -4617,7 +4857,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1517</width>
+     <width>1515</width>
      <height>21</height>
     </rect>
    </property>
@@ -4638,6 +4878,7 @@
     <addaction name="actionDiffusion"/>
     <addaction name="actionMake_Map"/>
     <addaction name="separator"/>
+    <addaction name="actionShow_Hide_Phantom_Reference_Values"/>
    </widget>
    <widget class="QMenu" name="menu_Instructions">
     <property name="title">
@@ -4701,6 +4942,8 @@
     <addaction name="actionSave_ROI_arrays"/>
     <addaction name="actionCrop_to_ROI"/>
     <addaction name="actionPlot_ROI_vs_Index"/>
+    <addaction name="actionUse_affine_regridding"/>
+    <addaction name="actionUse_raw_voxels"/>
    </widget>
    <widget class="QMenu" name="menuReports">
     <property name="title">
@@ -4740,6 +4983,13 @@
     <addaction name="actionInterpolate"/>
     <addaction name="actionSetScaleSlopeto1_0"/>
    </widget>
+   <widget class="QMenu" name="menuRawData_Recon">
+    <property name="title">
+     <string>TNMRViewer</string>
+    </property>
+    <addaction name="actionOpen_Image_Window"/>
+    <addaction name="actionDownloadImageStack"/>
+   </widget>
    <addaction name="menuFile"/>
    <addaction name="menuImageStacks"/>
    <addaction name="menuPhantom_properties"/>
@@ -4750,6 +5000,7 @@
    <addaction name="menuTools"/>
    <addaction name="menuReports"/>
    <addaction name="menu_Instructions"/>
+   <addaction name="menuRawData_Recon"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <action name="actionGeometric_DIstortion">
@@ -4835,6 +5086,9 @@
   </action>
   <action name="actionClear_All_Images">
    <property name="text">
+    <string>Clear All Images</string>
+   </property>
+   <property name="toolTip">
     <string>Clear All Images</string>
    </property>
    <property name="shortcut">
@@ -4931,6 +5185,9 @@
   </action>
   <action name="actionOpenPhantomFile">
    <property name="text">
+    <string>Open phantom file</string>
+   </property>
+   <property name="toolTip">
     <string>Open phantom file</string>
    </property>
   </action>
@@ -5095,6 +5352,9 @@
    <property name="text">
     <string>Show Image Stack</string>
    </property>
+   <property name="toolTip">
+    <string>Brings image stack to foreground</string>
+   </property>
   </action>
   <action name="actionLabel_Color">
    <property name="text">
@@ -5119,6 +5379,31 @@
   <action name="actionLC_Thermometer">
    <property name="text">
     <string>LC Thermometer</string>
+   </property>
+  </action>
+  <action name="actionUse_affine_regridding">
+   <property name="text">
+    <string>Use affine regridding</string>
+   </property>
+  </action>
+  <action name="actionUse_raw_voxels">
+   <property name="text">
+    <string>Use raw voxels</string>
+   </property>
+  </action>
+  <action name="actionShow_Hide_Phantom_Reference_Values">
+   <property name="text">
+    <string>Show-Hide Phantom Reference Values</string>
+   </property>
+  </action>
+  <action name="actionOpen_Image_Window">
+   <property name="text">
+    <string>Open Image Window</string>
+   </property>
+  </action>
+  <action name="actionDownloadImageStack">
+   <property name="text">
+    <string>DownloadImageStack</string>
    </property>
   </action>
  </widget>

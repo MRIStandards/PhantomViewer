@@ -1,22 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
+r"""
 Created on Sat Nov 09 11:00:01 2013
 Reads in and display Phantom properties
-Uses ROIPropertiesGui.py created from PhantomPropertiesGui.ui by QT4
-execute   "designer\pyuic4 designer\PhantomPropertiesGui.ui -o PhantomViewer\PhantomPropertiesGui.py" from system shell to regenerate ROIPropertiesGui.py from ROIPropertiesGui.ui
+Uses ROIPropertiesGui.py created from PhantomPropertiesGui.ui by QT5
+execute   "designer\pyuic5 designer\PhantomPropertiesGui.ui -o PhantomViewerpy\PhantomPropertiesGui.py" from system shell to regenerate ROIPropertiesGui.py from ROIPropertiesGui.ui
 @author: stephen russek
 """
 
 import sys
-try:
-  from PyQt4 import QtGui, QtCore
-except:
-  from PyQt5 import QtGui, QtCore
+from PyQt5 import QtGui, QtCore
+from PyQt5.QtWidgets import QMainWindow
 from PhantomPropertiesGui import Ui_PhantomPropertiesGui
 import numpy as np
 import VPhantom
 
-class PhantomProperties(QtGui.QMainWindow):
+class PhantomProperties(QMainWindow):
   def __init__(self ,phantom, parent = None):
     super(PhantomProperties, self).__init__()
     self.ui = Ui_PhantomPropertiesGui()

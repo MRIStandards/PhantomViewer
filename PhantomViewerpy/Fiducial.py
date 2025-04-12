@@ -10,7 +10,7 @@ updated 3-15-2020
 import sys
 import numpy as np
 import copy
-from pyqt import *         #imports required PyQt modules, tries PyQT4 then PyQt5
+from pyqt import *         #imports required PyQt modules
 import pydicom    #import pydicom to read DICOM data sets and DICOMDIR
 import pyqtgraph as pg    #uses pyqtgraph PlotWidget for graphs and ImageView windows for images, http://www.pyqtgraph.org/documentation/introduction.html
 import pyqtgraph.functions as fn
@@ -533,7 +533,7 @@ class fiducialWindow():
         dR0=self.sphereRCenters[n]/RnLength
       else:
         dR0=1.0
-      self.messages.message('{}\t {:.3f}\t {:.3f}\t {:.3f}\t{:.3f}\t {:.3f}\t {:.3f}\t{:.3f}\t {:.3f}\t {:.3f}\t{:.3f}\t {:.3f}\t {:.3f}\t {:.1f}\t {:.4f}\t {:.3f}\t {:.3f}\t {:.3f}\t{:.3f}\n'
+      self.messages.message('{}\t {:.3f}\t {:.3f}\t {:.3f}\t{:.3f}\t {:.3f}\t {:.3f}\t{:.3f}\t {:.3f}\t {:.3f}\t{:.3f}\t {:.3f}\t {:.3f}\t {:.4f}\t {:.4f}\t {:.3f}\t {:.3f}\t {:.3f}\t{:.3f}\n'
           .format(str(n+1),x,y,z,ijk[0],ijk[1],ijk[2],sx,sy,sz,self.sphereCoMs[n,0], self.sphereCoMs[n,1], self.sphereCoMs[n,2],asum, dR0, Rs, dx,dy,dz))    
     #make summary plots
     self.distortionPlot=plotWindow(self)
@@ -796,7 +796,7 @@ class messageWindow():
     self.fileMenu.addAction(self.actionSaveFile)
        
   def saveFile(self):
-    f = QFileDialog.getSaveFileName(parent=None, caption="Report File Name", directory = '', selectedFilter = ".txt")
+    f = QFileDialog.getSaveFileName(None, "Report File Name", '',".txt")
     if not f:  #if cancel is pressed return
       return None     
     if type(f)==tuple:    #passes  string with PyQt4 and a tuple with PyQt5
@@ -895,14 +895,14 @@ class plotWindow(QMainWindow):
         ydata=self.pw.geoDistortion[:,0]
         ylabel="L/R distortion dx (mm)"
         sd=np.std(ydata)
-        wintitle='Fiducial Geometric Disortion:X-direction, standard deviation= ' + '{:.3f}'.format(sd)
+        wintitle='Fiducial Geometric Disortion:X-direction, standard deviation(mm)= ' + '{:.4f}, '.format(sd)
         self.plotData(xdata, ydata, ylabel=ylabel,wintitle=wintitle,clearPlot=True,symbolBrush=self.pw.fiducialColors)
       def plotdy(self):
         xdata=self.pw.sphereRCenters
         ydata=self.pw.geoDistortion[:,1]
         ylabel="A/P distortion dy (mm)"
         sd=np.std(ydata)
-        wintitle='Fiducial Geometric Disortion:Y-direction, standard deviation= ' + '{:.3f}'.format(sd)
+        wintitle='Fiducial Geometric Disortion:Y-direction, standard deviation(mm)= ' + '{:.3f}, '.format(sd)
         self.plotData(xdata, ydata, ylabel=ylabel,wintitle=wintitle, clearPlot=True,symbolBrush=self.pw.fiducialColors)  
       def plotdz(self):
         xdata=self.pw.sphereRCenters
@@ -914,8 +914,11 @@ class plotWindow(QMainWindow):
       def plotIntensity(self):
         xdata=self.pw.sphereRCenters
         ydata=self.pw.sphereIntensity/np.amax(self.pw.sphereIntensity)
+ 
         ylabel="Integrated Sphere Intensity"
-        wintitle='Integrated intensity:' 
+        m=np.mean(ydata)
+        std=np.std(ydata)
+        wintitle='Mean={:.3f} ,std={:.3f}:'.format(m,std) 
         self.plotData(xdata, ydata, ylabel=ylabel, wintitle=wintitle, clearPlot=True, symbolBrush=self.pw.fiducialColors)
       def plotVolume(self):
         xdata=self.pw.sphereRCenters

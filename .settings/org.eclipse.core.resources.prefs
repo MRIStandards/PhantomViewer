@@ -1,5 +1,12 @@
 eclipse.preferences.version=1
 encoding//PhantomViewerpy/DICOMDIRGui5.py=utf-8
+encoding//PhantomViewerpy/DiffusionPhantom.py=utf-8
+encoding//PhantomViewerpy/PhantomProperties.py=utf-8
 encoding//PhantomViewerpy/PhantomViewer.py=utf-8
+encoding//PhantomViewerpy/PhantomViewerGui5.py=utf-8
 encoding//PhantomViewerpy/SystemPhantom.py=utf-8
+encoding//PhantomViewerpy/TNTdtypes.py=utf-8
 encoding//PhantomViewerpy/VPhantom.py=utf-8
+encoding//PhantomViewerpy/fdftopy.py=utf-8
+encoding//PhantomViewerpy/images2gif.py=utf-8
+encoding//PhantomViewerpy/utils.py=utf-8

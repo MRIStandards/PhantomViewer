@@ -62,7 +62,7 @@ from numpy.fft import fft, ifft, fft2, fftn, fftshift, ifft2, ifftshift, ifftn
 try:
     import fdf_io.fdflib as fl
 except ImportError:
-    print 'FDF IO c library not available'
+    print ('FDF IO c library not available')
 
 
 # some utility functions to make running FFTs a little nicer.
